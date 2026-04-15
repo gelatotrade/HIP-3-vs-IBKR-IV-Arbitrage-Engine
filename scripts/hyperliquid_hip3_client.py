@@ -171,6 +171,50 @@ class HyperliquidHIP3Client:
                     return float(ctxs[i].get('funding', 0))
         return None
 
+    def get_funding_history(self, coin: str, start_time: Optional[int] = None,
+                             max_days: int = 730) -> pd.DataFrame:
+        """Fetch historical funding rate data for a perpetual.
+
+        Hyperliquid funding rates are settled every 8 hours (3x/day).
+        Returns DataFrame: timestamp, coin, funding_rate, premium
+        """
+        end_time = int(time.time() * 1000)
+        if start_time is None:
+            start_time = end_time - max_days * 24 * 3600 * 1000
+
+        all_funding = []
+        current_start = start_time
+        chunk_ms = 30 * 24 * 3600 * 1000  # 30 days per chunk
+
+        while current_start < end_time:
+            data = self._post({
+                "type": "fundingHistory",
+                "coin": coin,
+                "startTime": current_start,
+            })
+            if isinstance(data, list) and len(data) > 0:
+                all_funding.extend(data)
+                # Move to after last timestamp
+                last_ts = max(int(d.get('time', current_start)) for d in data)
+                current_start = last_ts + 1
+            else:
+                current_start += chunk_ms
+            time.sleep(0.25)
+
+        if not all_funding:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(all_funding)
+        if 'time' in df.columns:
+            df['timestamp'] = pd.to_datetime(df['time'], unit='ms')
+        if 'fundingRate' in df.columns:
+            df['funding_rate'] = pd.to_numeric(df['fundingRate'], errors='coerce')
+        if 'premium' in df.columns:
+            df['premium'] = pd.to_numeric(df['premium'], errors='coerce')
+
+        df = df.sort_values('timestamp').drop_duplicates(subset='timestamp').reset_index(drop=True)
+        return df
+
     def get_all_hip3_markets(self) -> pd.DataFrame:
         """Discover all available HIP-3 spot markets with their context."""
         data = self.get_spot_meta_and_contexts()

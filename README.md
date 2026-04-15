@@ -1,6 +1,6 @@
 # Searching for Alpha — HIP-3 vs IBKR IV Arbitrage Engine
 
-A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 spot markets** and **IBKR (Interactive Brokers) options chains**. Features walk-forward backtesting across 15 HIP-3 assets, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and high-quality 3D visualizations (150 DPI, dark terminal aesthetic, per-regime colormaps).
+A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 spot markets** and **IBKR (Interactive Brokers) options chains**. Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 30 bars, **variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
 
 **Forked from:** [Market-Making-Engine-Regime-Change](https://github.com/gelatotrade/Market-Making-Engine-Regime-Change-)
 
@@ -19,11 +19,27 @@ HIP-3 markets on Hyperliquid price volatility **differently** than traditional o
 
 ---
 
-## 3D IV Surface Comparison: HIP-3 vs IBKR
+## Live Trading Dashboard (Animated)
 
-The engine computes **implied volatility surfaces** for both venues across strikes and expirations. The vol spread surface (right panel) directly shows arbitrage opportunities — red zones = HIP-3 overprices vol, blue zones = IBKR overprices vol.
+The animated dashboard shows the BTC backtest running live: equity curves building up, regime-colored price chart, ARIMA(2,1,2) forecast signal, EWMA conditional volatility, position sizing, and drawdown — all updating frame-by-frame.
 
-![IV Surface Comparison](docs/img/hip3_iv_surface_comparison.png)
+![Trading Dashboard](docs/img/hip3_trading_dashboard.gif)
+
+**Six panels (60 frames, dark terminal aesthetic):**
+- **Top-Left**: Strategy vs Buy & Hold cumulative return with alpha fill
+- **Top-Right**: Price chart colored by regime (green=BULL, red=CRISIS, cyan=RECOVERY)
+- **Mid-Left**: ARIMA(2,1,2) 1-step forecast (green=bullish, red=bearish)
+- **Mid-Right**: EWMA conditional volatility (annualized %) with crisis thresholds
+- **Bottom-Left**: Position size (%) — regime-adaptive (40% in crisis, 110% in bull)
+- **Bottom-Right**: Live drawdown tracking
+
+---
+
+## 3D IV Surface Comparison: HIP-3 vs IBKR (Animated)
+
+The engine computes **implied volatility surfaces** for both venues across strikes and expirations. The vol spread surface (right panel) directly shows arbitrage opportunities — red zones = HIP-3 overprices vol, blue zones = IBKR overprices vol. The animation cycles through different base IV levels to show how the spread changes across vol regimes.
+
+![IV Surface Animated](docs/img/hip3_iv_surface_3d.gif)
 
 **Three panels:**
 - **Left**: IBKR options IV surface — classic negative skew, rich term structure (blue → cyan colormap)
@@ -36,7 +52,7 @@ The engine computes **implied volatility surfaces** for both venues across strik
 
 HIP-3 perpetual contracts have **linear payoff** — they don't price gamma, vanna, vomma, or any higher-order Greeks. IBKR options **do** price these. This gap creates systematic edge for 7 strategies.
 
-![Greeks 3D Surface](docs/img/hip3_greeks_surface.png)
+![Greeks 3D Surface Animated](docs/img/hip3_greeks_surface_3d.gif)
 
 **Three panels (50-point grid, 150 DPI):**
 - **Vanna** (∂δ/∂σ): Delta sensitivity to vol changes — peaks near ATM, decays OTM
@@ -51,9 +67,9 @@ HIP-3 perpetual contracts have **linear payoff** — they don't price gamma, van
 
 Walk-forward backtest: 60% train / 40% test across 15 HIP-3 assets over 730 days. Strategy (colored) vs. buy-and-hold benchmark (grey). Green fill = alpha, red fill = underperformance.
 
-![Equity Curves](docs/img/hip3_equity_curves.png)
+![Equity Curves Animated](docs/img/hip3_equity_curves.gif)
 
-> All 15 assets show positive out-of-sample alpha. The strategy combines regime-adaptive market-making, IV arbitrage, and a Greeks strategy ensemble.
+> All 15 assets show positive out-of-sample alpha. The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, variable funding rates, and a Greeks strategy ensemble.
 
 ---
 
@@ -237,6 +253,33 @@ docs/img/
 | **CAUTIOUS** | 70% (trimmed) | Wide (2.0x) | 0.5x | Wider spreads, smaller size |
 | **CRISIS** | 35-50% (heavy trim) | Very wide (3.0x) | 0.3x | Max spread capture, min risk |
 | **RECOVERY** | 105% (overweight) | Medium (1.3x) | 1.1x | Capture recovery volatility |
+
+---
+
+## Rolling Time-Series Backtest (ARIMA + Variable Funding)
+
+The backtest uses a **professional-grade expanding-window protocol** — the same approach used by top quantitative funds:
+
+```
+[====== train ======][= test =]
+     [======= train ========][= test =]
+          [========= train =========][= test =]
+Re-fit ARIMA(2,1,2) every 30 bars on expanding window.
+```
+
+**Key features:**
+- **ARIMA(2,1,2)**: Autoregressive return forecast, re-fitted every 30 bars on expanding window (min 120 bars)
+- **EWMA Volatility**: Exponentially weighted conditional vol (GARCH proxy, span=20) for regime detection
+- **Variable Funding Rates**: Not constant — funding rates are regime-dependent (positive in bull, negative in bear, spiking in crisis), modelling real Hyperliquid 8h funding settlement dynamics
+- **No look-ahead bias**: All signals computed from data available at time t, forecast for t+1
+- **Expanding window**: Train set grows with each re-fit, capturing full history
+
+**Funding rate dynamics (realistic, variable):**
+- Base: correlated with 20d momentum (longs pay in uptrends, shorts pay in downtrends)
+- Vol component: high-vol environments → slightly positive funding
+- Noise: random per-settlement variation
+- Range: -1% to +1% per 8h settlement (3 settlements/day)
+- Regime-dependent: crisis periods show extreme funding rates
 
 ---
 
