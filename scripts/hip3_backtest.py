@@ -9,7 +9,7 @@ Architecture:
   4. REGIME: Controls position sizing, spread width, strategy selection
 
 Walk-forward: 60% train / 40% test
-Statistical validation: Sharpe t-test, block bootstrap, permutation test, deflated SR
+Statistical validation: paired t-test (t-distribution), Sharpe t-test (Lo 2002), block bootstrap, permutation test, deflated SR
 
 Usage:  python3 scripts/hip3_backtest.py
 """
@@ -213,17 +213,39 @@ def walk_forward(o, h, l, c, hip3_iv, ibkr_iv):
 
 
 # ── Statistical tests ──
-def sharpe_ttest(r):
+def ttest_excess(s, b):
+    """Paired t-test on excess returns (strategy - benchmark).
+    H0: mean(excess) = 0,  H1: mean(excess) > 0  (one-sided).
+    Uses scipy t-distribution with n-1 degrees of freedom.
+    """
+    excess = s - b
+    n = len(excess)
+    if n < 10:
+        return {'t_stat': 0.0, 'df': n-1, 'p_value': 1.0, 'significant': False}
+    t_stat, p_two = sp_stats.ttest_1samp(excess, 0.0)
+    p_one = p_two / 2 if t_stat > 0 else 1 - p_two / 2
+    return {'t_stat': float(t_stat), 'df': n-1,
+            'p_value': float(p_one), 'significant': p_one < SIGNIFICANCE}
+
+def ttest_sharpe(r):
+    """Sharpe-ratio t-test with Lo (2002) autocorrelation-adjusted SE.
+    Uses t-distribution (not normal) for proper finite-sample inference.
+    H0: SR = 0,  H1: SR > 0  (one-sided).
+    """
     n = len(r)
-    if n < 20: return {'p_value': 1.0, 'significant': False}
-    mu = np.mean(r)*365; sig = np.std(r,ddof=1)*np.sqrt(365)
-    sr = mu/sig if sig>1e-10 else 0
-    rho = np.corrcoef(r[:-1],r[1:])[0,1] if len(r)>1 else 0
-    eta = max(1+2*rho, 0.5)
-    se = np.sqrt(eta/n)*np.sqrt(1+0.5*sr**2)
-    t = sr/se if se>1e-10 else 0
-    p = 1-sp_stats.norm.cdf(t)
-    return {'p_value':p, 'significant':p<SIGNIFICANCE, 'sharpe':sr}
+    if n < 20:
+        return {'t_stat': 0.0, 'df': n-1, 'p_value': 1.0, 'significant': False, 'sharpe': 0.0}
+    mu = np.mean(r)*365; sig = np.std(r, ddof=1)*np.sqrt(365)
+    sr = mu/sig if sig > 1e-10 else 0
+    # Lo (2002) autocorrelation adjustment
+    rho = np.corrcoef(r[:-1], r[1:])[0, 1] if len(r) > 1 else 0
+    eta = max(1 + 2*rho, 0.5)
+    se = np.sqrt(eta/n) * np.sqrt(1 + 0.5*sr**2)
+    t = sr/se if se > 1e-10 else 0
+    # t-distribution with n-1 df (not normal)
+    p = 1 - sp_stats.t.cdf(t, df=n-1)
+    return {'t_stat': float(t), 'df': n-1,
+            'p_value': float(p), 'significant': p < SIGNIFICANCE, 'sharpe': sr}
 
 def block_bootstrap(r):
     n=len(r); rng=np.random.default_rng(42)
@@ -298,11 +320,18 @@ def main():
         combined = sr[:min_len] + gk_ensemble[:min_len] * 0.3
         curves[tk] = (combined, br[:min_len])
 
-        st1=sharpe_ttest(sr); st2=block_bootstrap(sr)
-        st3=perm_test(sr,br); st4=deflated_sr(wf['sharpe'],nc,wf['test_bars'])
+        st_t = ttest_excess(sr, br)
+        st_sr = ttest_sharpe(sr)
+        st2 = block_bootstrap(sr)
+        st3 = perm_test(sr, br)
+        st4 = deflated_sr(wf['sharpe'], nc, wf['test_bars'])
 
         row = {'asset':tk, **wf}
-        row['sr_pval']=st1['p_value']; row['sr_sig']=st1['significant']
+        # Paired t-test on excess returns (primary)
+        row['t_stat']=st_t['t_stat']; row['t_df']=st_t['df']
+        row['t_pval']=st_t['p_value']; row['t_sig']=st_t['significant']
+        # Sharpe t-test (Lo 2002, t-distribution)
+        row['sr_pval']=st_sr['p_value']; row['sr_sig']=st_sr['significant']
         row['boot_ci_lo']=st2['ci_lo']; row['boot_ci_hi']=st2['ci_hi']
         row['boot_pval']=st2['p_value']; row['boot_sig']=st2['significant']
         row['perm_pval']=st3['p_value']; row['perm_sig']=st3['significant']
@@ -314,7 +343,7 @@ def main():
         row['greeks_ensemble_ret'] = float(np.sum(gk_ensemble))
         results.append(row)
 
-        pv = f'p=[{st1["p_value"]:.4f} {st2["p_value"]:.4f} {st3["p_value"]:.4f}]'
+        pv = f't({st_t["df"]})={st_t["t_stat"]:.2f} p={st_t["p_value"]:.4f}  SR-p={st_sr["p_value"]:.4f}  perm-p={st3["p_value"]:.4f}'
         print(f'Alpha={wf["alpha"]*100:+.1f}%  Sharpe={wf["sharpe"]:.2f}  '
               f'IVarb={wf["iv_arb_ann"]*100:.1f}%  '
               f'Greek={best_greek.name}({best_greek.sharpe:.2f})  {pv}')
@@ -338,8 +367,8 @@ def main():
           f'{"Calmar":>7} {"MaxDD":>6} {"DD.Bn":>6} '
           f'{"IVarb":>6} {"Fil/d":>5} '
           f'{"BestGreek":<16} {"GkSR":>5} '
-          f'{"p(SR)":>7} {"p(Bt)":>7} {"p(Pm)":>7}')
-    print('-'*130)
+          f'{"t-stat":>7} {"p(t)":>7} {"p(SR)":>7} {"p(Bt)":>7} {"p(Pm)":>7}')
+    print('-'*150)
 
     pa = 0
     for _, r in df_res.sort_values('alpha', ascending=False).iterrows():
@@ -349,6 +378,7 @@ def main():
               f'{r["calmar"]:>7.2f} {r["max_dd"]*100:>5.1f}% {r["max_dd_bench"]*100:>5.1f}% '
               f'{r["iv_arb_ann"]*100:>5.1f}% {r["fills_per_day"]:>5.0f} '
               f'{r["best_greek_strategy"]:<16} {r["best_greek_sharpe"]:>5.2f} '
+              f'{r["t_stat"]:>7.2f} {fmt_p(r["t_pval"]):>7} '
               f'{fmt_p(r["sr_pval"]):>7} {fmt_p(r["boot_pval"]):>7} '
               f'{fmt_p(r["perm_pval"]):>7}')
 

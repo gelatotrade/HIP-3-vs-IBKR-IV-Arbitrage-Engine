@@ -324,17 +324,37 @@ def compute_metrics(s, b, fills, spread, iv_pnl, funding):
         'funding_ann':funding/n*ann,
     }
 
-def sharpe_ttest(r):
-    n=len(r)
-    if n<20: return {'p_value':1.0,'significant':False}
-    mu=np.mean(r)*365; sig=np.std(r,ddof=1)*np.sqrt(365)
-    sr=mu/sig if sig>1e-10 else 0
-    rho=np.corrcoef(r[:-1],r[1:])[0,1] if len(r)>1 else 0
-    eta=max(1+2*rho,0.5)
-    se=np.sqrt(eta/n)*np.sqrt(1+0.5*sr**2)
-    t=sr/se if se>1e-10 else 0
-    p=1-sp_stats.norm.cdf(t)
-    return {'p_value':p,'significant':p<SIGNIFICANCE}
+def ttest_excess(s, b):
+    """Paired t-test on excess returns (strategy - benchmark).
+    H0: mean(excess) = 0,  H1: mean(excess) > 0  (one-sided).
+    Uses scipy t-distribution with n-1 degrees of freedom.
+    """
+    excess = s - b
+    n = len(excess)
+    if n < 10:
+        return {'t_stat': 0.0, 'df': n-1, 'p_value': 1.0, 'significant': False}
+    t_stat, p_two = sp_stats.ttest_1samp(excess, 0.0)
+    p_one = p_two / 2 if t_stat > 0 else 1 - p_two / 2
+    return {'t_stat': float(t_stat), 'df': n-1,
+            'p_value': float(p_one), 'significant': p_one < SIGNIFICANCE}
+
+def ttest_sharpe(r):
+    """Sharpe-ratio t-test with Lo (2002) autocorrelation-adjusted SE.
+    Uses t-distribution (not normal) for proper finite-sample inference.
+    H0: SR = 0,  H1: SR > 0  (one-sided).
+    """
+    n = len(r)
+    if n < 20:
+        return {'t_stat': 0.0, 'df': n-1, 'p_value': 1.0, 'significant': False}
+    mu = np.mean(r)*365; sig = np.std(r, ddof=1)*np.sqrt(365)
+    sr = mu/sig if sig > 1e-10 else 0
+    rho = np.corrcoef(r[:-1], r[1:])[0, 1] if len(r) > 1 else 0
+    eta = max(1 + 2*rho, 0.5)
+    se = np.sqrt(eta/n) * np.sqrt(1 + 0.5*sr**2)
+    t = sr/se if se > 1e-10 else 0
+    p = 1 - sp_stats.t.cdf(t, df=n-1)
+    return {'t_stat': float(t), 'df': n-1,
+            'p_value': float(p), 'significant': p < SIGNIFICANCE}
 
 def block_bootstrap(r):
     n=len(r); rng=np.random.default_rng(42)
@@ -362,7 +382,7 @@ def main():
     print('='*95)
     print('  HIP-3 ROLLING TIME-SERIES BACKTEST (Equities / Commodities / ETFs)')
     print('  ARIMA(2,1,2) + EWMA-Vol + Variable Funding + IV Arb + Greeks')
-    print('  Expanding window | Re-fit every 20 bars | Per-asset history since HIP-3 launch')
+    print('  Expanding window | Re-fit every 15 bars | Per-asset history since HIP-3 launch')
     print('='*95)
 
     print('\nGenerating synthetic HIP-3 data (per-asset history since HIP-3 launch) ...')
@@ -411,11 +431,16 @@ def main():
             print('SKIP (metrics)'); continue
 
         # Stats
-        st1=sharpe_ttest(combined); st2=block_bootstrap(combined); st3=perm_test(combined,oos_bench[:min_len])
+        st_t = ttest_excess(combined, oos_bench[:min_len])
+        st_sr = ttest_sharpe(combined)
+        st2 = block_bootstrap(combined)
+        st3 = perm_test(combined, oos_bench[:min_len])
 
         best_gk = max(gk.values(), key=lambda x: x.sharpe)
         row = {'asset':tk, **m,
-               'sr_pval':st1['p_value'],'sr_sig':st1['significant'],
+               't_stat':st_t['t_stat'],'t_df':st_t['df'],
+               't_pval':st_t['p_value'],'t_sig':st_t['significant'],
+               'sr_pval':st_sr['p_value'],'sr_sig':st_sr['significant'],
                'boot_ci_lo':st2['ci_lo'],'boot_ci_hi':st2['ci_hi'],
                'boot_pval':st2['p_value'],'boot_sig':st2['significant'],
                'perm_pval':st3['p_value'],'perm_sig':st3['significant'],
@@ -427,9 +452,10 @@ def main():
         curves[tk] = (combined, oos_bench[:min_len])
 
         print(f'Alpha={m["alpha"]*100:+.1f}%  SR={m["sharpe"]:.2f}  '
+              f't({st_t["df"]})={st_t["t_stat"]:.2f} p={st_t["p_value"]:.4f}  '
               f'Fund={m["funding_ann"]*100:.1f}%  '
               f'Greek={best_gk.name}({best_gk.sharpe:.1f})  '
-              f'p=[{st1["p_value"]:.3f} {st2["p_value"]:.3f} {st3["p_value"]:.3f}]')
+              f'SR-p={st_sr["p_value"]:.3f} perm-p={st3["p_value"]:.3f}')
 
     if not results: sys.exit('No results.')
     df_res = pd.DataFrame(results)
@@ -444,8 +470,8 @@ def main():
 
     print(f'\n{"Asset":<8} {"Alpha":>7} {"Sharpe":>7} {"Calmar":>7} {"MaxDD":>6} '
           f'{"IVarb":>6} {"Fund":>6} {"Fil/d":>5} {"BestGreek":<14} '
-          f'{"p(SR)":>7} {"p(Bt)":>7} {"p(Pm)":>7}')
-    print('-'*120)
+          f'{"t-stat":>7} {"p(t)":>7} {"p(SR)":>7} {"p(Bt)":>7} {"p(Pm)":>7}')
+    print('-'*140)
 
     pa=0
     for _,r in df_res.sort_values('alpha',ascending=False).iterrows():
@@ -455,6 +481,7 @@ def main():
               f'{r["calmar"]:>7.2f} {r["max_dd"]*100:>5.1f}% '
               f'{r["iv_arb_ann"]*100:>5.1f}% {r["funding_ann"]*100:>5.1f}% '
               f'{r["fills_per_day"]:>5.0f} {r["best_greek"]:<14} '
+              f'{r["t_stat"]:>7.2f} {fp(r["t_pval"]):>7} '
               f'{fp(r["sr_pval"]):>7} {fp(r["boot_pval"]):>7} {fp(r["perm_pval"]):>7}')
 
     print(f'\n── Summary ──')
