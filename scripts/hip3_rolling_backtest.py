@@ -36,8 +36,8 @@ from greeks_strategies import GreeksStrategyEngine, classify_regime
 from ibkr_options_client import bs_greeks
 
 # ── Config ──
-MIN_TRAIN      = 80
-REFIT_EVERY    = 20
+MIN_TRAIN      = 60
+REFIT_EVERY    = 15
 FORECAST_HORIZON = 1
 
 HL_MAKER_FEE_BPS = 0.2
@@ -362,11 +362,11 @@ def main():
     print('='*95)
     print('  HIP-3 ROLLING TIME-SERIES BACKTEST (Equities / Commodities / ETFs)')
     print('  ARIMA(2,1,2) + EWMA-Vol + Variable Funding + IV Arb + Greeks')
-    print('  Expanding window | Re-fit every 20 bars | 15 assets x 185 days (since HIP-3 launch)')
+    print('  Expanding window | Re-fit every 20 bars | Per-asset history since HIP-3 launch')
     print('='*95)
 
-    print('\nGenerating synthetic HIP-3 data (equities/commodities/ETFs, 185d since Oct 2025) ...')
-    data = generate_synthetic_hip3_data(n_assets=15, n_days=185)
+    print('\nGenerating synthetic HIP-3 data (per-asset history since HIP-3 launch) ...')
+    data = generate_synthetic_hip3_data(n_assets=25, min_days=100)
     arb_engine = IVArbitrageEngine()
     greeks_engine = GreeksStrategyEngine()
 

@@ -31,32 +31,52 @@ from typing import Dict, List, Optional, Tuple
 BASE_URL = "https://api.hyperliquid.xyz/info"
 
 # HIP-3 perp tokens — real-world assets with IBKR options
-# Only includes equities, commodities, and ETFs/indices traded as HIP-3 perps
-# on Hyperliquid where IBKR also offers liquid options chains.
-HIP3_TOKENS = [
-    # ── US Equities (large-cap stocks with liquid IBKR options) ──
-    "AAPL", "MSFT", "GOOG", "AMZN", "NVDA", "META", "TSLA",
-    "AMD", "NFLX", "COIN", "MSTR", "GME", "PLTR", "UBER",
-    "SQ", "SHOP", "SNOW", "ARM", "SMCI", "NKE",
-    # ── Commodities (HIP-3 perps + IBKR options via futures/ETFs) ──
-    "GOLD", "SILVER", "OIL",
-    # ── ETFs & Indices (HIP-3 perps + deep IBKR options books) ──
-    "SPY",   # S&P 500
-    "QQQ",   # NASDAQ-100
-    "IWM",   # Russell 2000
-    "DIA",   # Dow Jones
-    "EWY",   # South Korea (MSCI)
-    "EWZ",   # Brazil (MSCI)
-    "FXI",   # China Large-Cap
-    "EEM",   # Emerging Markets
-    "XLF",   # Financials Sector
-    "GDX",   # Gold Miners
-    "TLT",   # 20+ Year Treasury Bonds
-    "HYG",   # High-Yield Corporate Bonds
-    "USO",   # United States Oil Fund
-    "GLD",   # Gold ETF
-    "SLV",   # Silver ETF
-]
+# Only includes confirmed live assets on Hyperliquid HIP-3 with their launch dates.
+# HIP-3 mainnet: Oct 13, 2025. Equity perps followed from Nov 2025.
+# Reference date for n_days calculation: Apr 15, 2026.
+HIP3_LAUNCH_DATES = {
+    # ── Wave 1: Core equities (Nov 9-13, 2025) ──
+    "AAPL":   datetime(2025, 11, 9),    # 157 days
+    "MSFT":   datetime(2025, 11, 12),   # 154 days
+    "NVDA":   datetime(2025, 11, 13),   # 153 days
+    "TSLA":   datetime(2025, 11, 13),   # 153 days
+    # ── Wave 2: More equities (late Nov 2025) ──
+    "GOOG":   datetime(2025, 11, 20),   # 146 days
+    "AMZN":   datetime(2025, 11, 20),   # 146 days
+    "META":   datetime(2025, 11, 22),   # 144 days
+    "AMD":    datetime(2025, 11, 25),   # 141 days
+    "NFLX":   datetime(2025, 11, 25),   # 141 days
+    "COIN":   datetime(2025, 11, 28),   # 138 days
+    # ── Wave 3: Extended equities (Dec 2025) ──
+    "PLTR":   datetime(2025, 12, 5),    # 131 days
+    "MSTR":   datetime(2025, 12, 5),    # 131 days
+    "GME":    datetime(2025, 12, 8),    # 128 days
+    "UBER":   datetime(2025, 12, 15),   # 121 days
+    "SQ":     datetime(2025, 12, 15),   # 121 days
+    "SHOP":   datetime(2025, 12, 18),   # 118 days
+    "ARM":    datetime(2025, 12, 20),   # 116 days
+    "SMCI":   datetime(2025, 12, 22),   # 114 days
+    "NKE":    datetime(2025, 12, 22),   # 114 days
+    "SNOW":   datetime(2025, 12, 20),   # 116 days
+    # ── Commodities (Dec 2025) ──
+    "GOLD":   datetime(2025, 12, 10),   # 126 days
+    "OIL":    datetime(2025, 12, 12),   # 124 days
+    "SILVER": datetime(2025, 12, 15),   # 121 days
+    # ── ETFs & Indices (Mar 2026) ──
+    "SPY":    datetime(2026, 3, 18),    # 28 days
+    "QQQ":    datetime(2026, 3, 20),    # 26 days
+}
+
+REFERENCE_DATE = datetime(2026, 4, 15)
+
+HIP3_TOKENS = list(HIP3_LAUNCH_DATES.keys())
+
+def get_asset_n_days(asset: str) -> int:
+    """Return number of trading days since asset's HIP-3 launch."""
+    launch = HIP3_LAUNCH_DATES.get(asset)
+    if launch is None:
+        return 150  # default
+    return (REFERENCE_DATE - launch).days
 
 # Interval mappings for candle data
 INTERVALS = {
@@ -401,12 +421,13 @@ def fetch_hip3_iv_data(tokens: List[str] = None) -> pd.DataFrame:
 # ──────────────────────────────────────────────────────────────
 # Synthetic HIP-3 data generation (for backtesting when API unavailable)
 # ──────────────────────────────────────────────────────────────
-def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = 185,
-                                  seed: int = 42) -> Dict[str, pd.DataFrame]:
+def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = None,
+                                  seed: int = 42, min_days: int = 100) -> Dict[str, pd.DataFrame]:
     """Generate realistic synthetic HIP-3 market data for backtesting.
 
-    HIP-3 mainnet launched October 13, 2025 — equity/commodity/ETF perps
-    have ~185 days of history (Oct 2025 → Apr 2026).
+    Uses per-asset launch dates from HIP3_LAUNCH_DATES. Each asset gets
+    exactly the number of days it has been live on HIP-3 (Oct 2025 → Apr 2026).
+    Assets with fewer than min_days of history are excluded.
 
     Simulates equity / commodity / ETF price dynamics with:
     - Realistic volatility (15-60% annualized depending on asset class)
@@ -418,42 +439,39 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = 185,
 
     # Synthetic HIP-3 tokens: equities, commodities, ETFs
     # (name, start_price, ann_vol, drift_mult)
-    token_params = [
+    token_params = {
         # ── US Equities ──
-        ("AAPL",   185.0,  0.28, 1.10),
-        ("MSFT",   375.0,  0.25, 1.08),
-        ("GOOG",   140.0,  0.30, 1.05),
-        ("AMZN",   155.0,  0.32, 1.10),
-        ("NVDA",   480.0,  0.50, 1.25),
-        ("META",   350.0,  0.38, 1.12),
-        ("TSLA",   245.0,  0.55, 1.00),
-        ("AMD",    145.0,  0.45, 1.15),
-        ("NFLX",   485.0,  0.35, 1.08),
-        ("COIN",    95.0,  0.60, 0.95),
+        "AAPL":   (185.0,  0.28, 1.10),
+        "MSFT":   (375.0,  0.25, 1.08),
+        "GOOG":   (140.0,  0.30, 1.05),
+        "AMZN":   (155.0,  0.32, 1.10),
+        "NVDA":   (480.0,  0.50, 1.25),
+        "META":   (350.0,  0.38, 1.12),
+        "TSLA":   (245.0,  0.55, 1.00),
+        "AMD":    (145.0,  0.45, 1.15),
+        "NFLX":   (485.0,  0.35, 1.08),
+        "COIN":   ( 95.0,  0.60, 0.95),
+        # ── Extended equities ──
+        "PLTR":   ( 70.0,  0.45, 1.10),
+        "MSTR":   (350.0,  0.60, 1.05),
+        "GME":    ( 28.0,  0.55, 0.90),
+        "UBER":   ( 75.0,  0.35, 1.08),
+        "SQ":     ( 80.0,  0.45, 1.05),
+        "SHOP":   ( 90.0,  0.40, 1.10),
+        "ARM":    (145.0,  0.45, 1.15),
+        "SMCI":   ( 40.0,  0.65, 1.00),
+        "NKE":    ( 72.0,  0.30, 0.95),
+        "SNOW":   (170.0,  0.40, 1.05),
         # ── Commodities ──
-        ("GOLD",  2050.0,  0.15, 1.02),
-        ("SILVER",  24.0,  0.25, 0.98),
-        ("OIL",     75.0,  0.35, 0.90),
+        "GOLD":   (2050.0, 0.15, 1.02),
+        "OIL":    (  75.0, 0.35, 0.90),
+        "SILVER": (  24.0, 0.25, 0.98),
         # ── ETFs / Indices ──
-        ("SPY",    475.0,  0.18, 1.08),
-        ("QQQ",    410.0,  0.22, 1.12),
-        ("IWM",    200.0,  0.22, 1.00),
-        ("DIA",    380.0,  0.16, 1.05),
-        ("EWY",     62.0,  0.25, 0.95),
-        ("EWZ",     33.0,  0.30, 0.88),
-        ("FXI",     25.0,  0.28, 0.85),
-        ("EEM",     40.0,  0.22, 0.92),
-        ("XLF",     38.0,  0.20, 1.05),
-        ("GDX",     30.0,  0.32, 0.95),
-        ("TLT",     95.0,  0.18, 0.80),
-        ("HYG",     75.0,  0.12, 0.98),
-        ("GLD",    190.0,  0.15, 1.02),
-        ("SLV",     22.0,  0.25, 0.98),
-        ("USO",     72.0,  0.35, 0.90),
-    ]
+        "SPY":    (475.0,  0.18, 1.08),
+        "QQQ":    (410.0,  0.22, 1.12),
+    }
 
     # Regime transition matrix (bull, normal, bear, crisis)
-    # Equities spend more time in bull/normal, less in crisis than crypto
     regimes = ['bull', 'normal', 'bear', 'crisis']
     transition = np.array([
         [0.97, 0.025, 0.004, 0.001],
@@ -470,34 +488,37 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = 185,
     }
 
     data = {}
-    tokens_to_use = token_params[:n_assets]
+    count = 0
 
-    for name, start_price, ann_vol, drift_mult in tokens_to_use:
+    for name in HIP3_TOKENS:
+        if name not in token_params:
+            continue
+        asset_days = get_asset_n_days(name) if n_days is None else n_days
+        if asset_days < min_days:
+            continue
+        if count >= n_assets:
+            break
+        count += 1
+
+        start_price, ann_vol, drift_mult = token_params[name]
         daily_vol = ann_vol / np.sqrt(365)
+        launch_date = HIP3_LAUNCH_DATES.get(name, REFERENCE_DATE - timedelta(days=asset_days))
 
         # Generate regime sequence
         regime_seq = []
         current_regime = 1  # start normal
-        for _ in range(n_days):
+        for _ in range(asset_days):
             regime_seq.append(current_regime)
             current_regime = rng.choice(4, p=transition[current_regime])
 
         # Generate returns with regime-dependent dynamics
-        timestamps = []
-        opens = []
-        highs = []
-        lows = []
-        closes = []
-        volumes = []
-
+        timestamps, opens, highs, lows, closes, volumes = [], [], [], [], [], []
         price = start_price
-        base_date = datetime(2025, 10, 13)  # HIP-3 mainnet launch
 
-        for d in range(n_days):
+        for d in range(asset_days):
             regime = regimes[regime_seq[d]]
             rp = regime_params[regime]
 
-            # Student-t innovations (df=5 for fat tails)
             innovation = rng.standard_t(5)
             vol = daily_vol * rp['vol_mult']
             ret = rp['drift'] * drift_mult + vol * innovation
@@ -505,35 +526,26 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = 185,
             open_price = price
             close_price = open_price * np.exp(ret)
 
-            # Intraday range
             range_vol = vol * rp['range_mult']
-            intraday_range = abs(rng.normal(0, range_vol * 2))
             high_price = max(open_price, close_price) * (1 + abs(rng.normal(0, range_vol * 0.5)))
             low_price = min(open_price, close_price) * (1 - abs(rng.normal(0, range_vol * 0.5)))
 
-            # Volume with clustering
             base_vol = rng.lognormal(10, 1.5)
             vol_regime_mult = {'bull': 1.2, 'normal': 1.0, 'bear': 1.5, 'crisis': 3.0}
             volume = base_vol * vol_regime_mult[regime] * start_price
 
-            timestamps.append(base_date + timedelta(days=d))
+            timestamps.append(launch_date + timedelta(days=d))
             opens.append(max(open_price, 1e-10))
             highs.append(max(high_price, 1e-10))
             lows.append(max(low_price, 1e-10))
             closes.append(max(close_price, 1e-10))
             volumes.append(volume)
-
             price = close_price
 
-        df = pd.DataFrame({
-            'timestamp': timestamps,
-            'open': opens,
-            'high': highs,
-            'low': lows,
-            'close': closes,
-            'volume': volumes,
+        data[name] = pd.DataFrame({
+            'timestamp': timestamps, 'open': opens, 'high': highs,
+            'low': lows, 'close': closes, 'volume': volumes,
         })
-        data[name] = df
 
     return data
 
@@ -561,7 +573,7 @@ if __name__ == '__main__':
         print("  Generating synthetic data instead ...")
 
     print("\n2. Generating synthetic HIP-3 data for backtesting ...")
-    synthetic = generate_synthetic_hip3_data(n_assets=15, n_days=185)
+    synthetic = generate_synthetic_hip3_data(n_assets=25, min_days=100)
     for name, df in synthetic.items():
         ret = (df['close'].iloc[-1] / df['close'].iloc[0] - 1) * 100
         vol = np.std(np.diff(np.log(df['close'].values))) * np.sqrt(365) * 100

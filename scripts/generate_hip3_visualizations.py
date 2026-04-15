@@ -286,13 +286,13 @@ def gen_summary(csv_path):
 def main():
     print('='*70); print('  HIP-3 Visualization Generator (Equities/Commodities/ETFs)'); print('='*70)
     OUT_DIR.mkdir(parents=True,exist_ok=True)
-    print('\nGenerating data (185d since HIP-3 launch Oct 2025)...'); data=generate_synthetic_hip3_data(n_assets=15,n_days=185)
+    print('\nGenerating data (per-asset history since HIP-3 launch)...'); data=generate_synthetic_hip3_data(n_assets=25,min_days=100)
     arb=IVArbitrageEngine(); all_bt={}; curves={}
     for tk,df in data.items():
         c,o,h,l=df['close'].values,df['open'].values,df['high'].values,df['low'].values
         f,_=generate_funding_history(c,seed=hash(tk)%2**31)
         bt=rolling_backtest_asset(o,h,l,c,f,arb.compute_hip3_implied_vol(c),arb.compute_ibkr_atm_iv(c),tk)
-        all_bt[tk]=bt; curves[tk]=(bt['daily_pnl'][80:],bt['daily_bench'][80:])
+        all_bt[tk]=bt; curves[tk]=(bt['daily_pnl'][60:],bt['daily_bench'][60:])
     gen_dashboard(data,all_bt); gen_iv(); gen_greeks(); gen_equity(curves); gen_regime(data,all_bt); gen_heatmap(data)
     csv=Path(__file__).resolve().parent.parent/'results'/'hip3_rolling_backtest_results.csv'
     if not csv.exists(): csv=Path(__file__).resolve().parent.parent/'results'/'hip3_backtest_results.csv'
