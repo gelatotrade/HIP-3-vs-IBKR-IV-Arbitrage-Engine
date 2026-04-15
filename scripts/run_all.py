@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 def main():
     print('='*80)
     print('  SEARCHING FOR ALPHA — HIP-3 vs IBKR Pipeline')
-    print('  Hyperliquid HIP-3 Spot | IBKR Options | IV Arbitrage')
+    print('  Hyperliquid HIP-3 Perps (Stocks/Commodities/ETFs) | IBKR Options | IV Arb')
     print('='*80)
 
     # Step 1: Run backtests

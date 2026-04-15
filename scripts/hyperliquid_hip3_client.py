@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
-Hyperliquid HIP-3 API Client — Fetch all HIP-3 stock/spot markets.
+Hyperliquid HIP-3 API Client — Fetch all HIP-3 perp markets (equities, commodities, ETFs).
 
-HIP-3 = Hyperliquidity Provider for spot tokens on Hyperliquid DEX.
-These markets have AMM-style liquidity with different IV characteristics
+HIP-3 = Hyperliquidity Provider on Hyperliquid DEX.
+These markets offer tokenized perps on real-world assets (stocks, indices,
+commodities) with AMM-style liquidity and different IV characteristics
 compared to traditional options markets (IBKR).
+
+Strategy focus: HIP-3 perps on assets that also have liquid options on IBKR,
+enabling IV arbitrage and higher-order Greek strategies between the two venues.
 
 Endpoints:
   POST https://api.hyperliquid.xyz/info
@@ -26,16 +30,32 @@ from typing import Dict, List, Optional, Tuple
 
 BASE_URL = "https://api.hyperliquid.xyz/info"
 
-# Known HIP-3 spot tokens (stock/equity-linked and major tokens)
-# HIP-3 markets include tokenized equities and high-liquidity spot pairs
+# HIP-3 perp tokens — real-world assets with IBKR options
+# Only includes equities, commodities, and ETFs/indices traded as HIP-3 perps
+# on Hyperliquid where IBKR also offers liquid options chains.
 HIP3_TOKENS = [
-    # Tokenized equities / stock-like HIP-3 markets
-    "PURR", "HFUN", "JEFF", "TRUMP", "MELANIA",
-    # Major crypto with HIP-3 liquidity
-    "BTC", "ETH", "SOL", "AVAX", "ARB", "OP", "SUI", "APT",
-    "DOGE", "PEPE", "WIF", "BONK", "ONDO", "TIA", "SEI",
-    "INJ", "PYTH", "JTO", "JUP", "W", "STRK", "DYM",
-    "MANTA", "ALT", "PIXEL", "PORTAL", "AEVO", "ENA",
+    # ── US Equities (large-cap stocks with liquid IBKR options) ──
+    "AAPL", "MSFT", "GOOG", "AMZN", "NVDA", "META", "TSLA",
+    "AMD", "NFLX", "COIN", "MSTR", "GME", "PLTR", "UBER",
+    "SQ", "SHOP", "SNOW", "ARM", "SMCI", "NKE",
+    # ── Commodities (HIP-3 perps + IBKR options via futures/ETFs) ──
+    "GOLD", "SILVER", "OIL",
+    # ── ETFs & Indices (HIP-3 perps + deep IBKR options books) ──
+    "SPY",   # S&P 500
+    "QQQ",   # NASDAQ-100
+    "IWM",   # Russell 2000
+    "DIA",   # Dow Jones
+    "EWY",   # South Korea (MSCI)
+    "EWZ",   # Brazil (MSCI)
+    "FXI",   # China Large-Cap
+    "EEM",   # Emerging Markets
+    "XLF",   # Financials Sector
+    "GDX",   # Gold Miners
+    "TLT",   # 20+ Year Treasury Bonds
+    "HYG",   # High-Yield Corporate Bonds
+    "USO",   # United States Oil Fund
+    "GLD",   # Gold ETF
+    "SLV",   # Silver ETF
 ]
 
 # Interval mappings for candle data
@@ -300,7 +320,7 @@ class HyperliquidHIP3Client:
             components.append(spread_iv)
         if funding is not None:
             # Annualize 8h funding rate → vol premium
-            funding_ann = abs(funding) * 3 * 365  # 3x per day, 365 days
+            funding_ann = abs(funding) * 3 * 365  # 3x per day
             vol_premium = np.sqrt(funding_ann) if funding_ann > 0 else 0
             if vol_premium > 0:
                 components.append(rv_20d * (1 + vol_premium) if rv_20d else vol_premium)
@@ -385,47 +405,65 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = 730,
                                   seed: int = 42) -> Dict[str, pd.DataFrame]:
     """Generate realistic synthetic HIP-3 market data for backtesting.
 
-    Simulates crypto-like price dynamics with:
-    - Higher volatility than equities (50-150% annualized)
+    Simulates equity / commodity / ETF price dynamics with:
+    - Realistic volatility (15-60% annualized depending on asset class)
     - Fat tails (Student-t innovations)
     - Regime switching (bull/bear/crisis)
     - Volume clustering
     """
     rng = np.random.default_rng(seed)
 
-    # Synthetic HIP-3 tokens with realistic parameters
+    # Synthetic HIP-3 tokens: equities, commodities, ETFs
+    # (name, start_price, ann_vol, drift_mult)
     token_params = [
-        ("PURR",    1.2,   1.20, 0.85),  # (name, start_price, ann_vol, drift_mult)
-        ("HFUN",    0.05,  1.50, 0.70),
-        ("JEFF",    3.50,  0.95, 0.90),
-        ("BTC",     42000, 0.65, 1.10),
-        ("ETH",     2200,  0.75, 1.05),
-        ("SOL",     95,    0.90, 1.15),
-        ("AVAX",    32,    0.85, 0.95),
-        ("ARB",     1.15,  1.00, 0.90),
-        ("OP",      2.80,  0.95, 0.92),
-        ("SUI",     1.45,  1.10, 1.00),
-        ("APT",     8.50,  0.88, 0.95),
-        ("DOGE",    0.08,  1.05, 0.80),
-        ("PEPE",    0.000001, 1.60, 0.75),
-        ("WIF",     0.50,  1.40, 0.85),
-        ("ONDO",    0.70,  1.00, 1.05),
+        # ── US Equities ──
+        ("AAPL",   185.0,  0.28, 1.10),
+        ("MSFT",   375.0,  0.25, 1.08),
+        ("GOOG",   140.0,  0.30, 1.05),
+        ("AMZN",   155.0,  0.32, 1.10),
+        ("NVDA",   480.0,  0.50, 1.25),
+        ("META",   350.0,  0.38, 1.12),
+        ("TSLA",   245.0,  0.55, 1.00),
+        ("AMD",    145.0,  0.45, 1.15),
+        ("NFLX",   485.0,  0.35, 1.08),
+        ("COIN",    95.0,  0.60, 0.95),
+        # ── Commodities ──
+        ("GOLD",  2050.0,  0.15, 1.02),
+        ("SILVER",  24.0,  0.25, 0.98),
+        ("OIL",     75.0,  0.35, 0.90),
+        # ── ETFs / Indices ──
+        ("SPY",    475.0,  0.18, 1.08),
+        ("QQQ",    410.0,  0.22, 1.12),
+        ("IWM",    200.0,  0.22, 1.00),
+        ("DIA",    380.0,  0.16, 1.05),
+        ("EWY",     62.0,  0.25, 0.95),
+        ("EWZ",     33.0,  0.30, 0.88),
+        ("FXI",     25.0,  0.28, 0.85),
+        ("EEM",     40.0,  0.22, 0.92),
+        ("XLF",     38.0,  0.20, 1.05),
+        ("GDX",     30.0,  0.32, 0.95),
+        ("TLT",     95.0,  0.18, 0.80),
+        ("HYG",     75.0,  0.12, 0.98),
+        ("GLD",    190.0,  0.15, 1.02),
+        ("SLV",     22.0,  0.25, 0.98),
+        ("USO",     72.0,  0.35, 0.90),
     ]
 
     # Regime transition matrix (bull, normal, bear, crisis)
+    # Equities spend more time in bull/normal, less in crisis than crypto
     regimes = ['bull', 'normal', 'bear', 'crisis']
     transition = np.array([
-        [0.96, 0.03, 0.008, 0.002],
-        [0.04, 0.90, 0.05,  0.01],
-        [0.02, 0.08, 0.87,  0.03],
-        [0.01, 0.05, 0.14,  0.80],
+        [0.97, 0.025, 0.004, 0.001],
+        [0.05, 0.91,  0.035, 0.005],
+        [0.03, 0.10,  0.85,  0.02],
+        [0.02, 0.08,  0.15,  0.75],
     ])
 
     regime_params = {
-        'bull':   {'drift': 0.0015, 'vol_mult': 0.7, 'range_mult': 0.8},
-        'normal': {'drift': 0.0003, 'vol_mult': 1.0, 'range_mult': 1.0},
-        'bear':   {'drift': -0.0010, 'vol_mult': 1.4, 'range_mult': 1.3},
-        'crisis': {'drift': -0.0035, 'vol_mult': 2.5, 'range_mult': 2.0},
+        'bull':   {'drift': 0.0005, 'vol_mult': 0.7, 'range_mult': 0.8},
+        'normal': {'drift': 0.0002, 'vol_mult': 1.0, 'range_mult': 1.0},
+        'bear':   {'drift': -0.0006, 'vol_mult': 1.5, 'range_mult': 1.3},
+        'crisis': {'drift': -0.0020, 'vol_mult': 2.5, 'range_mult': 2.0},
     }
 
     data = {}
@@ -499,7 +537,7 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = 730,
 
 if __name__ == '__main__':
     print("=" * 80)
-    print("  Hyperliquid HIP-3 Market Scanner")
+    print("  Hyperliquid HIP-3 Market Scanner (Equities / Commodities / ETFs)")
     print("=" * 80)
 
     client = HyperliquidHIP3Client()
@@ -511,7 +549,7 @@ if __name__ == '__main__':
         if not markets.empty:
             print(f"\n  Active HIP-3 spot markets ({len(markets)}):")
             for _, row in markets.head(20).iterrows():
-                print(f"    {row['token']:<10} Price: ${row['mid_price']:<12.6f}  "
+                print(f"    {row['token']:<10} Price: ${row['mid_price']:<12.2f}  "
                       f"Vol(24h): ${row['day_volume_usd']:>15,.0f}")
         else:
             print("  No live markets found, generating synthetic data ...")
@@ -524,5 +562,5 @@ if __name__ == '__main__':
     for name, df in synthetic.items():
         ret = (df['close'].iloc[-1] / df['close'].iloc[0] - 1) * 100
         vol = np.std(np.diff(np.log(df['close'].values))) * np.sqrt(365) * 100
-        print(f"    {name:<10} {len(df)} bars  Price: ${df['close'].iloc[-1]:.6f}  "
+        print(f"    {name:<10} {len(df)} bars  Price: ${df['close'].iloc[-1]:>10.2f}  "
               f"Return: {ret:+.1f}%  Vol: {vol:.0f}%")

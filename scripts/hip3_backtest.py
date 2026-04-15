@@ -38,7 +38,7 @@ PARAM_GRID = {
     'n_levels':       [8, 12, 18],
     'level_step_bps': [15, 30, 50],
     'order_size':     [0.01, 0.02],
-    'crisis_vol':     [0.60, 0.80, 1.00],
+    'crisis_vol':     [0.25, 0.35, 0.50],
     'crisis_trim':    [0.15, 0.30],
     'ema_len':        [5, 10],
     'iv_arb_weight':  [0.3, 0.5],
@@ -265,7 +265,7 @@ def main():
     print('  HIP-3 vs IBKR | Walk-forward: 60%/40% | Regime-adaptive')
     print('='*90)
 
-    print('\nGenerating HIP-3 synthetic market data (15 assets, 730 days) ...')
+    print('\nGenerating HIP-3 synthetic market data (equities/commodities/ETFs, 730 days) ...')
     data = generate_synthetic_hip3_data(n_assets=15, n_days=730)
 
     arb_engine = IVArbitrageEngine()

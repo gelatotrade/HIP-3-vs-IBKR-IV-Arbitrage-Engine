@@ -51,8 +51,8 @@ class StrategyResult:
 # ──────────────────────────────────────────────────────────────
 # Regime detection (same as original repo)
 # ──────────────────────────────────────────────────────────────
-def classify_regime(returns, idx, crisis_vol=0.80):
-    """Classify regime for crypto assets (higher vol thresholds)."""
+def classify_regime(returns, idx, crisis_vol=0.35):
+    """Classify regime for equities / commodities / ETFs."""
     if idx < 40:
         return 'NORMAL'
     w = returns[max(0, idx-20):idx]
@@ -61,15 +61,15 @@ def classify_regime(returns, idx, crisis_vol=0.80):
     w_prev = returns[max(0, idx-40):max(0, idx-20)]
     vol_prev = np.std(w_prev, ddof=1) * np.sqrt(365) if len(w_prev) > 2 else vol
 
-    crisis_thresh = crisis_vol + 0.30
+    crisis_thresh = crisis_vol + 0.15
     cautious_thresh = crisis_vol
-    if vol > crisis_thresh and mom < -0.10:
+    if vol > crisis_thresh and mom < -0.06:
         return 'CRISIS'
     if vol > cautious_thresh and mom < 0:
         return 'CAUTIOUS'
-    if vol_prev > cautious_thresh + 0.15 and vol < vol_prev * 0.85 and mom > 0:
+    if vol_prev > cautious_thresh + 0.10 and vol < vol_prev * 0.85 and mom > 0:
         return 'RECOVERY'
-    if vol < 0.50 and mom > 0.03:
+    if vol < 0.25 and mom > 0.02:
         return 'BULL'
     return 'NORMAL'
 
@@ -333,7 +333,7 @@ class GreeksStrategyEngine:
           Sell vol on HIP-3 (short vega, linear)
         - Net: long the convexity gap
 
-        Edge: crypto vol tends to cluster → vomma captures
+        Edge: vol tends to cluster → vomma captures
         the non-linear payoff from vol spikes.
         """
         N = len(prices)
