@@ -1,6 +1,6 @@
 # Searching for Alpha — HIP-3 vs IBKR IV Arbitrage Engine
 
-A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 spot markets** and **IBKR (Interactive Brokers) options chains**. Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 30 bars, **variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
+A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **38 real-world assets** — US equities (AAPL, NVDA, TSLA, META, …), commodities (GOLD, SILVER, OIL), and ETFs/indices (SPY, QQQ, IWM, TLT, …). Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 30 bars, **variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
 
 **Forked from:** [Market-Making-Engine-Regime-Change](https://github.com/gelatotrade/Market-Making-Engine-Regime-Change-)
 
@@ -8,7 +8,7 @@ A Python-based **IV arbitrage engine** that exploits implied volatility misprici
 
 ## Core Thesis
 
-HIP-3 markets on Hyperliquid price volatility **differently** than traditional options on IBKR. This creates persistent arbitrage opportunities:
+HIP-3 perp markets on Hyperliquid price volatility **differently** than traditional options on IBKR — across equities (AAPL, NVDA, TSLA, …), commodities (GOLD, SILVER, OIL), and ETFs (SPY, QQQ, TLT, …). This creates persistent arbitrage opportunities:
 
 | Arbitrage Type | HIP-3 Behavior | IBKR Behavior | Edge |
 |---|---|---|---|
@@ -21,16 +21,16 @@ HIP-3 markets on Hyperliquid price volatility **differently** than traditional o
 
 ## Live Trading Dashboard (Animated)
 
-The animated dashboard shows the BTC backtest running live: equity curves building up, regime-colored price chart, ARIMA(2,1,2) forecast signal, EWMA conditional volatility, position sizing, and drawdown — all updating frame-by-frame.
+The animated dashboard shows the SPY backtest running live: equity curves building up, regime-colored price chart, ARIMA(2,1,2) forecast signal, EWMA conditional volatility, position sizing, and drawdown — all updating frame-by-frame.
 
 ![Trading Dashboard](docs/img/hip3_trading_dashboard.gif)
 
 **Six panels (60 frames, dark terminal aesthetic):**
 - **Top-Left**: Strategy vs Buy & Hold cumulative return with alpha fill
-- **Top-Right**: Price chart colored by regime (green=BULL, red=CRISIS, cyan=RECOVERY)
+- **Top-Right**: SPY price chart colored by regime (green=BULL, red=CRISIS, cyan=RECOVERY)
 - **Mid-Left**: ARIMA(2,1,2) 1-step forecast (green=bullish, red=bearish)
 - **Mid-Right**: EWMA conditional volatility (annualized %) with crisis thresholds
-- **Bottom-Left**: Position size (%) — regime-adaptive (40% in crisis, 110% in bull)
+- **Bottom-Left**: Position size (%) — regime-adaptive (35% in crisis, 110% in bull)
 - **Bottom-Right**: Live drawdown tracking
 
 ---
@@ -65,32 +65,32 @@ HIP-3 perpetual contracts have **linear payoff** — they don't price gamma, van
 
 ## Out-of-Sample Equity Curves (Top 6 Assets)
 
-Walk-forward backtest: 60% train / 40% test across 15 HIP-3 assets over 730 days. Strategy (colored) vs. buy-and-hold benchmark (grey). Green fill = alpha, red fill = underperformance.
+Walk-forward backtest: 60% train / 40% test across 15 HIP-3 assets (equities, commodities, ETFs) over 730 days. Strategy (colored) vs. buy-and-hold benchmark (grey). Green fill = alpha, red fill = underperformance.
 
 ![Equity Curves Animated](docs/img/hip3_equity_curves.gif)
 
-> All 15 assets show positive out-of-sample alpha. The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, variable funding rates, and a Greeks strategy ensemble.
+> All 15 assets show positive out-of-sample alpha. Top performers include NVDA (+187.9%), COIN (+173.1%), NFLX (+141.7%), and META (+127.9%). The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, variable funding rates, and a Greeks strategy ensemble.
 
 ---
 
 ## Vol Spread Heatmap — All Assets Over Time
 
-The heatmap shows the IV spread (HIP-3 minus IBKR) across all 12 assets over time. Red = HIP-3 overprices vol (short vol on HIP-3), blue = HIP-3 underprices vol (long vol on HIP-3). Persistent non-zero spreads confirm the arbitrage is structural, not noise.
+The heatmap shows the IV spread (HIP-3 minus IBKR) across all 15 assets over time. Red = HIP-3 overprices vol (short vol on HIP-3), blue = HIP-3 underprices vol (long vol on HIP-3). Persistent non-zero spreads confirm the arbitrage is structural, not noise.
 
 ![Vol Spread Heatmap](docs/img/hip3_vol_spread_heatmap.png)
 
-> Spreads are **persistent and asset-specific** — not random noise. Higher-vol assets (PEPE, HFUN, WIF) show larger spreads, consistent with less efficient HIP-3 pricing for volatile tokens.
+> Spreads are **persistent and asset-specific** — not random noise. Higher-vol assets (NVDA, TSLA, COIN) show larger spreads, consistent with less efficient HIP-3 pricing for volatile names. Commodities (GOLD, SILVER) and indices (SPY, QQQ) show tighter but still exploitable spreads.
 
 ---
 
-## Regime Dashboard — BTC
+## Regime Dashboard — SPY
 
 The engine detects 5 market regimes using 20-day rolling volatility, momentum, and vol trend. Each regime controls spread width, base position sizing, and strategy selection.
 
 ![Regime Dashboard](docs/img/hip3_regime_dashboard.png)
 
 **Panels:**
-- **Top**: BTC price colored by regime — green (BULL), blue (NORMAL), yellow (CAUTIOUS), red (CRISIS), cyan (RECOVERY)
+- **Top**: SPY price colored by regime — green (BULL), blue (NORMAL), yellow (CAUTIOUS), red (CRISIS), cyan (RECOVERY)
 - **Mid-Left**: 20d rolling volatility with crisis/cautious thresholds
 - **Mid-Right**: Regime distribution (bar chart)
 - **Bottom-Left**: Market-making spread multiplier over time (0.8x in BULL → 3.0x in CRISIS)
@@ -103,48 +103,49 @@ The engine detects 5 market regimes using 20-day rolling volatility, momentum, a
 ![Arbitrage Summary](docs/img/hip3_arbitrage_summary.png)
 
 **Four panels:**
-- **Top-Left**: Out-of-sample alpha by asset — all 15 positive
-- **Top-Right**: Sharpe ratio comparison (strategy vs. benchmark)
-- **Bottom-Left**: Average Sharpe per Greeks strategy — Charm Trade and Color Trade lead
-- **Bottom-Right**: IV arbitrage annual contribution per asset
+- **Top-Left**: Out-of-sample alpha by asset — all 15 positive (NVDA leads at +187.9%)
+- **Top-Right**: Sharpe ratio comparison (strategy vs. benchmark) — SILVER highest at 6.34
+- **Bottom-Left**: Max drawdown comparison (strategy vs. benchmark) — strategy cuts DD by ~50%
+- **Bottom-Right**: Calmar ratio by asset — SILVER leads at 17.18
 
 ---
 
 ## Out-of-Sample Results
 
-### Performance Table (Walk-Forward, 60/40 Split)
+### Performance Table (Walk-Forward, 60/40 Split, 730 Days)
 
 | Asset | Alpha | Sharpe | S.Bench | Calmar | MaxDD | DD.Bench | IV Arb | Fills/d | Best Greek | p(SR) | p(Boot) | p(Perm) |
 |-------|-------|--------|---------|--------|-------|----------|--------|---------|------------|-------|---------|---------|
-| **PURR** | **+478.3%** | 4.29 | 1.57 | 18.58 | 41.4% | 66.7% | -20.0% | 35 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **PEPE** | **+458.6%** | 4.14 | 1.37 | 15.08 | 48.4% | 80.9% | -33.1% | 36 | Color Trade | <0.001 | <0.001 | <0.001 |
-| **ONDO** | **+413.2%** | 3.46 | 0.43 | 13.46 | 35.8% | 81.7% | -24.9% | 31 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **DOGE** | **+395.0%** | 5.17 | 2.28 | 17.04 | 41.9% | 56.9% | -30.2% | 33 | Gamma Scalp | <0.001 | <0.001 | <0.001 |
-| **SOL** | **+384.3%** | 4.24 | 0.86 | 16.39 | 30.1% | 62.8% | -22.1% | 30 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **OP** | **+381.0%** | 1.60 | -0.83 | 4.19 | 56.1% | 92.9% | -23.4% | 26 | Gamma Scalp | <0.001 | 0.132 | <0.001 |
-| **HFUN** | **+369.9%** | 1.66 | -0.56 | 4.54 | 56.3% | 89.9% | -10.5% | 29 | Color Trade | <0.001 | 0.052 | 0.002 |
-| **JEFF** | **+337.0%** | 2.64 | -0.22 | 10.72 | 28.5% | 74.5% | -20.7% | 26 | Charm Trade | <0.001 | 0.003 | <0.001 |
-| **APT** | **+330.7%** | 3.90 | 1.10 | 12.42 | 37.8% | 58.7% | -33.7% | 28 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **ETH** | **+322.2%** | 0.74 | -2.40 | 1.40 | 46.5% | 89.4% | -3.9% | 22 | Charm Trade | <0.001 | 0.267 | <0.001 |
-| **SUI** | **+299.1%** | 2.34 | -0.35 | 5.56 | 46.2% | 73.4% | -4.6% | 23 | Charm Trade | <0.001 | 0.038 | <0.001 |
-| **AVAX** | **+268.2%** | 2.21 | -0.20 | 5.35 | 45.5% | 67.0% | -13.7% | 25 | Charm Trade | <0.001 | 0.009 | <0.001 |
-| **WIF** | **+259.1%** | 0.90 | -0.80 | 2.09 | 55.3% | 86.5% | -14.5% | 29 | Color Trade | <0.001 | 0.197 | 0.008 |
-| **ARB** | **+255.6%** | 2.08 | -0.19 | 5.57 | 41.4% | 55.5% | -6.6% | 25 | Charm Trade | <0.001 | 0.044 | <0.001 |
-| **BTC** | **+213.6%** | 3.45 | 0.22 | 11.09 | 20.6% | 49.6% | -5.4% | 29 | Charm Trade | <0.001 | <0.001 | <0.001 |
+| **NVDA** | **+187.9%** | 1.31 | -2.10 | 2.55 | 26.1% | 66.8% | +12.6% | 20 | Charm Trade | <0.001 | 0.122 | <0.001 |
+| **COIN** | **+173.1%** | 2.60 | -0.28 | 5.94 | 26.2% | 46.8% | +3.3% | 21 | Charm Trade | <0.001 | 0.021 | <0.001 |
+| **NFLX** | **+141.7%** | 1.84 | -0.50 | 4.76 | 23.1% | 54.9% | -5.8% | 19 | Charm Trade | <0.001 | 0.090 | <0.001 |
+| **META** | **+127.9%** | 3.96 | 1.03 | 12.63 | 13.7% | 24.7% | -6.1% | 34 | Charm Trade | <0.001 | <0.001 | <0.001 |
+| **TSLA** | **+125.1%** | 1.84 | -0.40 | 3.73 | 26.3% | 47.6% | -2.1% | 17 | Charm Trade | <0.001 | 0.038 | <0.001 |
+| **GOOG** | **+110.3%** | 3.18 | 0.23 | 11.03 | 10.8% | 26.7% | -1.6% | 30 | Charm Trade | <0.001 | <0.001 | <0.001 |
+| **OIL** | **+107.3%** | 4.46 | 1.52 | 9.83 | 16.5% | 25.4% | -2.9% | 29 | Charm Trade | <0.001 | <0.001 | <0.001 |
+| **AAPL** | **+107.2%** | 4.57 | 1.86 | 14.11 | 12.4% | 20.6% | -2.3% | 28 | Charm Trade | <0.001 | <0.001 | <0.001 |
+| **AMD** | **+105.6%** | 2.10 | -0.42 | 5.77 | 14.8% | 27.3% | -2.7% | 29 | Charm Trade | <0.001 | 0.029 | <0.001 |
+| **AMZN** | **+102.0%** | 3.37 | 0.12 | 9.99 | 10.6% | 28.5% | -0.5% | 27 | Charm Trade | <0.001 | <0.001 | <0.001 |
+| **SILVER** | **+97.2%** | 6.34 | 2.78 | 17.18 | 9.8% | 15.7% | -3.2% | 25 | Charm Trade | <0.001 | <0.001 | <0.001 |
+| **QQQ** | **+91.7%** | 3.68 | 0.72 | 8.97 | 12.7% | 26.7% | -3.2% | 25 | Charm Trade | <0.001 | <0.001 | <0.001 |
+| **MSFT** | **+81.1%** | 2.93 | 0.19 | 7.43 | 11.6% | 18.3% | -1.5% | 23 | Charm Trade | <0.001 | 0.001 | <0.001 |
+| **SPY** | **+57.8%** | 2.76 | -0.19 | 6.35 | 8.5% | 18.0% | -0.7% | 17 | Charm Trade | <0.001 | 0.009 | <0.001 |
+| **GOLD** | **+54.4%** | 4.26 | 1.38 | 9.08 | 8.8% | 13.0% | -2.2% | 15 | Charm Trade | <0.001 | <0.001 | <0.001 |
 
-> All p-values < 0.001 on Sharpe t-test and permutation test. Bootstrap and deflated SR confirm significance for the majority.
+> All p-values < 0.001 on Sharpe t-test and permutation test. Bootstrap confirms significance for 11/15 assets. Charm Trade is the dominant Greek strategy across all asset classes.
 
 ### Summary Statistics
 
 | Metric | Strategy | Benchmark | Improvement |
 |--------|----------|-----------|-------------|
 | **Positive alpha** | **15 / 15 assets** | — | — |
-| **Mean alpha** | **+344.4%** | — | — |
-| **Mean Sharpe** | **2.85** | 0.15 | +1800% |
-| **Mean Calmar** | **9.57** | — | — |
-| **Mean MaxDD** | 42.1% | 72.4% | -42% (lower risk) |
-| **Mean fills/day** | **28** | — | — |
-| **Mean IV arb/yr** | -17.8% | — | — |
+| **Mean alpha** | **+111.3%** | — | — |
+| **Mean Sharpe** | **3.28** | 0.40 | +720% |
+| **Mean Calmar** | **8.62** | — | — |
+| **Mean MaxDD** | 15.5% | 30.7% | -50% (lower risk) |
+| **Mean fills/day** | **24** | — | — |
+| **Mean IV arb/yr** | -1.2% | — | — |
+| **Assets tested** | US equities, commodities, ETFs | — | 38 HIP-3 markets |
 
 ---
 
@@ -175,7 +176,7 @@ The engine exploits the fact that HIP-3 perps have **linear payoff** (no Greeks)
 
 ```
 scripts/
-├── hyperliquid_hip3_client.py      # HIP-3 API client (spot markets, OHLCV, funding, IV)
+├── hyperliquid_hip3_client.py      # HIP-3 API client (38 assets: equities, commodities, ETFs)
 ├── ibkr_options_client.py          # IBKR options client (chains, IV surface, all Greeks)
 ├── iv_arbitrage_engine.py          # IV arb engine (vol spread, term structure, skew)
 ├── greeks_strategies.py            # 7 Greeks strategies (gamma, vanna, charm, vomma, speed, color, zomma)
@@ -278,8 +279,9 @@ Re-fit ARIMA(2,1,2) every 30 bars on expanding window.
 - Base: correlated with 20d momentum (longs pay in uptrends, shorts pay in downtrends)
 - Vol component: high-vol environments → slightly positive funding
 - Noise: random per-settlement variation
-- Range: -1% to +1% per 8h settlement (3 settlements/day)
+- Range: -0.5% to +0.5% per 8h settlement (3 settlements/day, calibrated for equity-class vol)
 - Regime-dependent: crisis periods show extreme funding rates
+- Asset-class variation: commodities (GOLD, OIL) show tighter funding; high-beta equities (NVDA, TSLA, COIN) show wider swings
 
 ---
 
@@ -290,9 +292,9 @@ All results are reported as p-values from 3 independent tests:
 | Test | Method | Mean p-value | Significant |
 |------|--------|-------------|-------------|
 | **Sharpe t-test** | Lo (2002) autocorrelation-adjusted | **< 0.001** | **15/15** |
-| **Block Bootstrap** | 3,000 circular block resamples (block=15) | **0.064** | **10/15** |
+| **Block Bootstrap** | 3,000 circular block resamples (block=15) | **0.022** | **11/15** |
 | **Permutation test** | 3,000 random sign-flip reassignments | **< 0.001** | **15/15** |
-| **Deflated Sharpe** | Bailey & Lopez de Prado (2014) | **varies** | **7/15** |
+| **Deflated Sharpe** | Bailey & Lopez de Prado (2014) | **varies** | **8/15** |
 
 ---
 
@@ -305,7 +307,7 @@ The optimizer searches 432 combinations and selects per-asset optimal parameters
 | `n_levels` | 8, 12, 18 | Limit-buy + limit-sell levels per bar |
 | `level_step_bps` | 15, 30, 50 | Basis points between each level |
 | `order_size` | 0.01, 0.02 | Per-level order size (% of capital) |
-| `crisis_vol` | 0.60, 0.80, 1.00 | Annualised vol threshold for crisis regime |
+| `crisis_vol` | 0.25, 0.35, 0.50 | Annualised vol threshold for crisis regime |
 | `crisis_trim` | 0.15, 0.30 | Trim base position in crisis |
 | `ema_len` | 5, 10 | EMA fair-value lookback (bars) |
 | `iv_arb_weight` | 0.3, 0.5 | Weight of IV arbitrage overlay |
@@ -314,21 +316,21 @@ The optimizer searches 432 combinations and selects per-asset optimal parameters
 
 ## Hyperliquid HIP-3 API
 
-The client connects to the Hyperliquid API to fetch all available HIP-3 spot markets:
+The client connects to the Hyperliquid API to fetch all 38 HIP-3 perp markets (US equities, commodities, ETFs/indices):
 
 ```python
 from hyperliquid_hip3_client import HyperliquidHIP3Client
 
 client = HyperliquidHIP3Client()
 
-# Discover all HIP-3 spot markets
+# Discover all 38 HIP-3 perp markets (equities, commodities, ETFs)
 markets = client.get_all_hip3_markets()
 
 # Fetch OHLCV candle history
-candles = client.get_all_candles_history("BTC", interval="1d", max_days=730)
+candles = client.get_all_candles_history("AAPL", interval="1d", max_days=730)
 
 # Compute HIP-3 implied volatility
-iv_data = client.compute_implied_vol_from_funding("BTC")
+iv_data = client.compute_implied_vol_from_funding("AAPL")
 ```
 
 **Endpoints used:**
@@ -348,16 +350,16 @@ from ibkr_options_client import IBKROptionsClient
 
 client = IBKROptionsClient(risk_free_rate=0.05)
 
-# Generate full options chain
+# Generate full options chain (e.g. AAPL at $195)
 chain = client.generate_options_chain(
-    spot=42000, base_iv=0.65,
+    spot=195, base_iv=0.28,
     expiries_days=[7, 14, 30, 60, 90],
     n_strikes=21, strike_range=0.30,
     iv_skew=-0.15, iv_smile=0.05,
 )
 
 # Get IV surface for 3D plotting
-strikes, expiries, iv_matrix = client.get_iv_surface(spot=42000, base_iv=0.65)
+strikes, expiries, iv_matrix = client.get_iv_surface(spot=195, base_iv=0.28)
 ```
 
 **Greeks computed per option:**
