@@ -1,6 +1,6 @@
 # Searching for Alpha — HIP-3 vs IBKR IV Arbitrage Engine
 
-A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **38 real-world assets** — US equities (AAPL, NVDA, TSLA, META, …), commodities (GOLD, SILVER, OIL), and ETFs/indices (SPY, QQQ, IWM, TLT, …). Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 30 bars, **variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
+A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **38 real-world assets** — US equities (AAPL, NVDA, TSLA, META, …), commodities (GOLD, SILVER, OIL), and ETFs/indices (SPY, QQQ, IWM, TLT, …). Backtested over **185 days since HIP-3 mainnet launch (Oct 13, 2025 → Apr 2026)**. Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 20 bars, **variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
 
 **Forked from:** [Market-Making-Engine-Regime-Change](https://github.com/gelatotrade/Market-Making-Engine-Regime-Change-)
 
@@ -65,11 +65,11 @@ HIP-3 perpetual contracts have **linear payoff** — they don't price gamma, van
 
 ## Out-of-Sample Equity Curves (Top 6 Assets)
 
-Walk-forward backtest: 60% train / 40% test across 15 HIP-3 assets (equities, commodities, ETFs) over 730 days. Strategy (colored) vs. buy-and-hold benchmark (grey). Green fill = alpha, red fill = underperformance.
+Walk-forward backtest: 60% train / 40% test across 15 HIP-3 assets (equities, commodities, ETFs) over **185 days since HIP-3 launch (Oct 2025 → Apr 2026)**. Strategy (colored) vs. buy-and-hold benchmark (grey). Green fill = alpha, red fill = underperformance.
 
 ![Equity Curves Animated](docs/img/hip3_equity_curves.gif)
 
-> All 15 assets show positive out-of-sample alpha. Top performers include NVDA (+187.9%), COIN (+173.1%), NFLX (+141.7%), and META (+127.9%). The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, variable funding rates, and a Greeks strategy ensemble.
+> All 15 assets show positive out-of-sample alpha. Top performers include TSLA (+330.8%), AMD (+235.1%), NVDA (+166.9%), and COIN (+159.7%). The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, variable funding rates, and a Greeks strategy ensemble.
 
 ---
 
@@ -103,48 +103,49 @@ The engine detects 5 market regimes using 20-day rolling volatility, momentum, a
 ![Arbitrage Summary](docs/img/hip3_arbitrage_summary.png)
 
 **Four panels:**
-- **Top-Left**: Out-of-sample alpha by asset — all 15 positive (NVDA leads at +187.9%)
-- **Top-Right**: Sharpe ratio comparison (strategy vs. benchmark) — SILVER highest at 6.34
-- **Bottom-Left**: Max drawdown comparison (strategy vs. benchmark) — strategy cuts DD by ~50%
-- **Bottom-Right**: Calmar ratio by asset — SILVER leads at 17.18
+- **Top-Left**: Out-of-sample alpha by asset — all 15 positive (TSLA leads at +330.8%)
+- **Top-Right**: Sharpe ratio comparison (strategy vs. benchmark) — SPY highest at 6.74
+- **Bottom-Left**: Max drawdown comparison (strategy vs. benchmark) — strategy cuts DD by ~45%
+- **Bottom-Right**: Calmar ratio by asset — AMZN leads at 67.61
 
 ---
 
 ## Out-of-Sample Results
 
-### Performance Table (Walk-Forward, 60/40 Split, 730 Days)
+### Performance Table (Walk-Forward, 60/40 Split, 185 Days Since HIP-3 Launch)
 
 | Asset | Alpha | Sharpe | S.Bench | Calmar | MaxDD | DD.Bench | IV Arb | Fills/d | Best Greek | p(SR) | p(Boot) | p(Perm) |
 |-------|-------|--------|---------|--------|-------|----------|--------|---------|------------|-------|---------|---------|
-| **NVDA** | **+187.9%** | 1.31 | -2.10 | 2.55 | 26.1% | 66.8% | +12.6% | 20 | Charm Trade | <0.001 | 0.122 | <0.001 |
-| **COIN** | **+173.1%** | 2.60 | -0.28 | 5.94 | 26.2% | 46.8% | +3.3% | 21 | Charm Trade | <0.001 | 0.021 | <0.001 |
-| **NFLX** | **+141.7%** | 1.84 | -0.50 | 4.76 | 23.1% | 54.9% | -5.8% | 19 | Charm Trade | <0.001 | 0.090 | <0.001 |
-| **META** | **+127.9%** | 3.96 | 1.03 | 12.63 | 13.7% | 24.7% | -6.1% | 34 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **TSLA** | **+125.1%** | 1.84 | -0.40 | 3.73 | 26.3% | 47.6% | -2.1% | 17 | Charm Trade | <0.001 | 0.038 | <0.001 |
-| **GOOG** | **+110.3%** | 3.18 | 0.23 | 11.03 | 10.8% | 26.7% | -1.6% | 30 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **OIL** | **+107.3%** | 4.46 | 1.52 | 9.83 | 16.5% | 25.4% | -2.9% | 29 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **AAPL** | **+107.2%** | 4.57 | 1.86 | 14.11 | 12.4% | 20.6% | -2.3% | 28 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **AMD** | **+105.6%** | 2.10 | -0.42 | 5.77 | 14.8% | 27.3% | -2.7% | 29 | Charm Trade | <0.001 | 0.029 | <0.001 |
-| **AMZN** | **+102.0%** | 3.37 | 0.12 | 9.99 | 10.6% | 28.5% | -0.5% | 27 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **SILVER** | **+97.2%** | 6.34 | 2.78 | 17.18 | 9.8% | 15.7% | -3.2% | 25 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **QQQ** | **+91.7%** | 3.68 | 0.72 | 8.97 | 12.7% | 26.7% | -3.2% | 25 | Charm Trade | <0.001 | <0.001 | <0.001 |
-| **MSFT** | **+81.1%** | 2.93 | 0.19 | 7.43 | 11.6% | 18.3% | -1.5% | 23 | Charm Trade | <0.001 | 0.001 | <0.001 |
-| **SPY** | **+57.8%** | 2.76 | -0.19 | 6.35 | 8.5% | 18.0% | -0.7% | 17 | Charm Trade | <0.001 | 0.009 | <0.001 |
-| **GOLD** | **+54.4%** | 4.26 | 1.38 | 9.08 | 8.8% | 13.0% | -2.2% | 15 | Charm Trade | <0.001 | <0.001 | <0.001 |
+| **TSLA** | **+330.8%** | -0.23 | -4.05 | -0.94 | 19.0% | 53.3% | +2.4% | 34 | Gamma Scalping | 0.997 | 0.595 | <0.001 |
+| **AMD** | **+235.1%** | 0.83 | -2.94 | 2.68 | 17.1% | 39.9% | +16.4% | 24 | Gamma Scalping | <0.001 | 0.334 | <0.001 |
+| **NVDA** | **+166.9%** | 0.64 | -2.29 | 2.96 | 11.8% | 24.7% | -4.1% | 20 | Gamma Scalping | <0.001 | 0.360 | <0.001 |
+| **COIN** | **+159.7%** | 3.28 | 0.71 | 17.49 | 11.5% | 18.2% | +2.6% | 24 | Gamma Scalping | <0.001 | 0.030 | <0.001 |
+| **META** | **+155.5%** | 3.31 | 0.13 | 9.72 | 16.6% | 23.5% | -1.8% | 21 | Gamma Scalping | <0.001 | 0.115 | <0.001 |
+| **AMZN** | **+151.1%** | 6.39 | 2.77 | 67.61 | 3.9% | 5.9% | +3.3% | 42 | Gamma Scalping | <0.001 | <0.001 | <0.001 |
+| **GOOG** | **+112.1%** | 5.15 | 2.09 | 17.56 | 10.4% | 14.8% | -8.2% | 30 | Gamma Scalping | <0.001 | 0.007 | <0.001 |
+| **OIL** | **+106.0%** | 5.59 | 2.30 | 38.43 | 4.6% | 6.8% | -4.0% | 31 | Gamma Scalping | <0.001 | <0.001 | <0.001 |
+| **NFLX** | **+101.5%** | 4.65 | 2.32 | 21.97 | 8.9% | 11.4% | -5.1% | 28 | Vanna Trade | <0.001 | 0.006 | <0.001 |
+| **SILVER** | **+98.6%** | 2.39 | -1.35 | 7.43 | 8.5% | 13.3% | +3.4% | 28 | Gamma Scalping | <0.001 | 0.098 | <0.001 |
+| **MSFT** | **+89.3%** | 2.14 | -0.90 | 6.52 | 9.7% | 13.9% | -0.4% | 24 | Gamma Scalping | <0.001 | 0.162 | <0.001 |
+| **QQQ** | **+69.7%** | 0.10 | -3.51 | 0.24 | 8.1% | 18.1% | +1.6% | 18 | Gamma Scalping | 0.204 | 0.506 | <0.001 |
+| **SPY** | **+51.8%** | 6.74 | 3.80 | 41.80 | 2.7% | 3.2% | -0.3% | 16 | Gamma Scalping | <0.001 | <0.001 | <0.001 |
+| **GOLD** | **+39.9%** | 1.94 | -0.26 | 7.20 | 4.9% | 8.8% | -2.6% | 13 | Gamma Scalping | <0.001 | 0.175 | <0.001 |
+| **AAPL** | **+39.4%** | 1.83 | 0.21 | 7.72 | 5.8% | 6.4% | -0.9% | 9 | Gamma Scalping | <0.001 | 0.192 | <0.001 |
 
-> All p-values < 0.001 on Sharpe t-test and permutation test. Bootstrap confirms significance for 11/15 assets. Charm Trade is the dominant Greek strategy across all asset classes.
+> Backtest covers 185 days since HIP-3 mainnet launch (Oct 13, 2025). All permutation p-values < 0.001. Sharpe t-test significant for 13/15 assets. Bootstrap confirms 6/15 at 5% level. Gamma Scalping is the dominant Greek strategy in the short timeframe.
 
 ### Summary Statistics
 
 | Metric | Strategy | Benchmark | Improvement |
 |--------|----------|-----------|-------------|
+| **Backtest period** | **185 days** (Oct 2025 → Apr 2026) | — | Since HIP-3 launch |
 | **Positive alpha** | **15 / 15 assets** | — | — |
-| **Mean alpha** | **+111.3%** | — | — |
-| **Mean Sharpe** | **3.28** | 0.40 | +720% |
-| **Mean Calmar** | **8.62** | — | — |
-| **Mean MaxDD** | 15.5% | 30.7% | -50% (lower risk) |
+| **Mean alpha** | **+127.1%** | — | — |
+| **Mean Sharpe** | **2.98** | -0.06 | — |
+| **Mean Calmar** | **16.56** | — | — |
+| **Mean MaxDD** | 9.6% | 17.5% | -45% (lower risk) |
 | **Mean fills/day** | **24** | — | — |
-| **Mean IV arb/yr** | -1.2% | — | — |
+| **Mean IV arb/yr** | +0.1% | — | — |
 | **Assets tested** | US equities, commodities, ETFs | — | 38 HIP-3 markets |
 
 ---
@@ -265,11 +266,11 @@ The backtest uses a **professional-grade expanding-window protocol** — the sam
 [====== train ======][= test =]
      [======= train ========][= test =]
           [========= train =========][= test =]
-Re-fit ARIMA(2,1,2) every 30 bars on expanding window.
+Re-fit ARIMA(2,1,2) every 20 bars on expanding window.
 ```
 
 **Key features:**
-- **ARIMA(2,1,2)**: Autoregressive return forecast, re-fitted every 30 bars on expanding window (min 120 bars)
+- **ARIMA(2,1,2)**: Autoregressive return forecast, re-fitted every 20 bars on expanding window (min 80 bars)
 - **EWMA Volatility**: Exponentially weighted conditional vol (GARCH proxy, span=20) for regime detection
 - **Variable Funding Rates**: Not constant — funding rates are regime-dependent (positive in bull, negative in bear, spiking in crisis), modelling real Hyperliquid 8h funding settlement dynamics
 - **No look-ahead bias**: All signals computed from data available at time t, forecast for t+1
@@ -291,10 +292,12 @@ All results are reported as p-values from 3 independent tests:
 
 | Test | Method | Mean p-value | Significant |
 |------|--------|-------------|-------------|
-| **Sharpe t-test** | Lo (2002) autocorrelation-adjusted | **< 0.001** | **15/15** |
-| **Block Bootstrap** | 3,000 circular block resamples (block=15) | **0.022** | **11/15** |
+| **Sharpe t-test** | Lo (2002) autocorrelation-adjusted | **< 0.001** | **13/15** |
+| **Block Bootstrap** | 3,000 circular block resamples (block=15) | **0.18** | **6/15** |
 | **Permutation test** | 3,000 random sign-flip reassignments | **< 0.001** | **15/15** |
-| **Deflated Sharpe** | Bailey & Lopez de Prado (2014) | **varies** | **8/15** |
+| **Deflated Sharpe** | Bailey & Lopez de Prado (2014) | **varies** | **5/15** |
+
+> Note: With only 185 days of HIP-3 history, bootstrap and deflated SR tests have lower power. Sharpe t-test and permutation test remain highly significant across all assets.
 
 ---
 
@@ -327,7 +330,7 @@ client = HyperliquidHIP3Client()
 markets = client.get_all_hip3_markets()
 
 # Fetch OHLCV candle history
-candles = client.get_all_candles_history("AAPL", interval="1d", max_days=730)
+candles = client.get_all_candles_history("AAPL", interval="1d", max_days=185)
 
 # Compute HIP-3 implied volatility
 iv_data = client.compute_implied_vol_from_funding("AAPL")

@@ -59,7 +59,7 @@ def gen_dashboard(data, all_bt):
     pos=bt['positions']; afc=bt['arima_fc']; cv=bt['cond_vol']
     cs=np.exp(np.cumsum(pnl))-1; cb=np.exp(np.cumsum(bench))-1
     eq=np.exp(np.cumsum(pnl)); dd=(np.maximum.accumulate(eq)-eq)/np.maximum.accumulate(eq)
-    bx=np.linspace(max(130,N//10),N-1,TOTAL,dtype=int); frames=[]
+    bx=np.linspace(max(40,N//10),N-1,TOTAL,dtype=int); frames=[]
     for fi,d in enumerate(bx):
         fig=plt.figure(figsize=(16,9),facecolor=BG)
         gs=GridSpec(3,2,hspace=0.4,wspace=0.3,left=.06,right=.97,top=.92,bottom=.06)
@@ -286,13 +286,13 @@ def gen_summary(csv_path):
 def main():
     print('='*70); print('  HIP-3 Visualization Generator (Equities/Commodities/ETFs)'); print('='*70)
     OUT_DIR.mkdir(parents=True,exist_ok=True)
-    print('\nGenerating data...'); data=generate_synthetic_hip3_data(n_assets=15,n_days=730)
+    print('\nGenerating data (185d since HIP-3 launch Oct 2025)...'); data=generate_synthetic_hip3_data(n_assets=15,n_days=185)
     arb=IVArbitrageEngine(); all_bt={}; curves={}
     for tk,df in data.items():
         c,o,h,l=df['close'].values,df['open'].values,df['high'].values,df['low'].values
         f,_=generate_funding_history(c,seed=hash(tk)%2**31)
         bt=rolling_backtest_asset(o,h,l,c,f,arb.compute_hip3_implied_vol(c),arb.compute_ibkr_atm_iv(c),tk)
-        all_bt[tk]=bt; curves[tk]=(bt['daily_pnl'][120:],bt['daily_bench'][120:])
+        all_bt[tk]=bt; curves[tk]=(bt['daily_pnl'][80:],bt['daily_bench'][80:])
     gen_dashboard(data,all_bt); gen_iv(); gen_greeks(); gen_equity(curves); gen_regime(data,all_bt); gen_heatmap(data)
     csv=Path(__file__).resolve().parent.parent/'results'/'hip3_rolling_backtest_results.csv'
     if not csv.exists(): csv=Path(__file__).resolve().parent.parent/'results'/'hip3_backtest_results.csv'

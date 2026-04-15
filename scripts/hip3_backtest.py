@@ -31,8 +31,8 @@ from greeks_strategies import GreeksStrategyEngine, classify_regime
 
 # ── Config ──
 TRAIN_PCT      = 0.60
-MIN_TRAIN_BARS = 200
-MIN_TEST_BARS  = 100
+MIN_TRAIN_BARS = 100
+MIN_TEST_BARS  = 50
 
 PARAM_GRID = {
     'n_levels':       [8, 12, 18],
@@ -265,8 +265,8 @@ def main():
     print('  HIP-3 vs IBKR | Walk-forward: 60%/40% | Regime-adaptive')
     print('='*90)
 
-    print('\nGenerating HIP-3 synthetic market data (equities/commodities/ETFs, 730 days) ...')
-    data = generate_synthetic_hip3_data(n_assets=15, n_days=730)
+    print('\nGenerating HIP-3 synthetic market data (equities/commodities/ETFs, 185 days since HIP-3 launch) ...')
+    data = generate_synthetic_hip3_data(n_assets=15, n_days=185)
 
     arb_engine = IVArbitrageEngine()
     nc = len(list(product(*PARAM_GRID.values())))

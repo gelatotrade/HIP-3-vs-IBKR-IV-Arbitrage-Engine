@@ -401,9 +401,12 @@ def fetch_hip3_iv_data(tokens: List[str] = None) -> pd.DataFrame:
 # ──────────────────────────────────────────────────────────────
 # Synthetic HIP-3 data generation (for backtesting when API unavailable)
 # ──────────────────────────────────────────────────────────────
-def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = 730,
+def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = 185,
                                   seed: int = 42) -> Dict[str, pd.DataFrame]:
     """Generate realistic synthetic HIP-3 market data for backtesting.
+
+    HIP-3 mainnet launched October 13, 2025 — equity/commodity/ETF perps
+    have ~185 days of history (Oct 2025 → Apr 2026).
 
     Simulates equity / commodity / ETF price dynamics with:
     - Realistic volatility (15-60% annualized depending on asset class)
@@ -488,7 +491,7 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = 730,
         volumes = []
 
         price = start_price
-        base_date = datetime(2023, 1, 1)
+        base_date = datetime(2025, 10, 13)  # HIP-3 mainnet launch
 
         for d in range(n_days):
             regime = regimes[regime_seq[d]]
@@ -558,7 +561,7 @@ if __name__ == '__main__':
         print("  Generating synthetic data instead ...")
 
     print("\n2. Generating synthetic HIP-3 data for backtesting ...")
-    synthetic = generate_synthetic_hip3_data(n_assets=15, n_days=730)
+    synthetic = generate_synthetic_hip3_data(n_assets=15, n_days=185)
     for name, df in synthetic.items():
         ret = (df['close'].iloc[-1] / df['close'].iloc[0] - 1) * 100
         vol = np.std(np.diff(np.log(df['close'].values))) * np.sqrt(365) * 100
