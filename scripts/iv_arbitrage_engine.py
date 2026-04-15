@@ -97,15 +97,15 @@ class IVArbitrageEngine:
             else:
                 vol_of_vol = 0
 
-            # HIP-3 IV: weighted blend with crypto-specific adjustments
-            components = [rv_20d * 1.15]  # RV with base premium
+            # HIP-3 IV: weighted blend with perp-market adjustments
+            components = [rv_20d * 1.10]  # RV with base premium
             if funding_premium > 0:
                 components.append(rv_20d + funding_premium)
             if spread_vol > 0:
                 components.append(spread_vol)
 
-            hip3_iv[i] = np.mean(components) * (1 + 0.3 * vol_of_vol)
-            hip3_iv[i] = max(hip3_iv[i], 0.10)  # Floor at 10%
+            hip3_iv[i] = np.mean(components) * (1 + 0.25 * vol_of_vol)
+            hip3_iv[i] = max(hip3_iv[i], 0.05)  # Floor at 5%
 
         # Fill first 20 bars
         if hip3_iv[20] > 0:

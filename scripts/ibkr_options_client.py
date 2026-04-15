@@ -395,11 +395,11 @@ if __name__ == '__main__':
 
     client = IBKROptionsClient()
 
-    # Example: BTC-like asset
-    spot = 42000
-    base_iv = 0.65
+    # Example: SPY (S&P 500 ETF)
+    spot = 475
+    base_iv = 0.18
 
-    print(f"\nGenerating options chain for spot=${spot:,.0f}, IV={base_iv*100:.0f}%")
+    print(f"\nGenerating options chain for SPY spot=${spot:,.0f}, IV={base_iv*100:.0f}%")
     chain = client.generate_options_chain(spot, base_iv)
     print(f"  Chain: {len(chain)} quotes ({len(chain[chain['type']=='call'])} calls, "
           f"{len(chain[chain['type']=='put'])} puts)")

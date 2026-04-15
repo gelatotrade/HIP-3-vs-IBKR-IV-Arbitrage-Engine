@@ -53,7 +53,7 @@ def _s(ax):
 
 def gen_dashboard(data, all_bt):
     print('\n[1/6] hip3_trading_dashboard.gif ...')
-    tk='BTC' if 'BTC' in data else list(data.keys())[0]
+    tk='SPY' if 'SPY' in data else list(data.keys())[0]
     df=data[tk]; bt=all_bt[tk]; c=df['close'].values; N=len(c)
     pnl=bt['daily_pnl']; bench=bt['daily_bench']; reg=bt['regimes']
     pos=bt['positions']; afc=bt['arima_fc']; cv=bt['cond_vol']
@@ -226,7 +226,7 @@ def gen_summary(csv_path):
     plt.close(fig); print('  Saved hip3_arbitrage_summary.png')
 
 def main():
-    print('='*70); print('  HIP-3 Visualization Generator'); print('='*70)
+    print('='*70); print('  HIP-3 Visualization Generator (Equities/Commodities/ETFs)'); print('='*70)
     OUT_DIR.mkdir(parents=True,exist_ok=True)
     print('\nGenerating data...'); data=generate_synthetic_hip3_data(n_assets=15,n_days=730)
     arb=IVArbitrageEngine(); all_bt={}; curves={}

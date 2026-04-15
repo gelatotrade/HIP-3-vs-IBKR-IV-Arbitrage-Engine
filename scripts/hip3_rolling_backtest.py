@@ -85,11 +85,11 @@ def ewma_vol(returns, span=20):
 def generate_funding_history(prices, seed=42):
     """Generate realistic variable funding rates tied to price dynamics.
 
-    Funding rates on Hyperliquid:
+    Funding rates on Hyperliquid perps (equities/commodities/ETFs):
       - Settled every 8 hours (3x/day)
       - Positive when longs pay shorts (bullish bias)
       - Negative when shorts pay longs (bearish bias)
-      - Ranges: -0.1% to +0.3% per 8h typically, spikes to +-1% in extremes
+      - Ranges: -0.05% to +0.15% per 8h typically, spikes to +-0.5% in extremes
       - Correlated with momentum and open interest dynamics
     """
     rng = np.random.default_rng(seed)
@@ -110,18 +110,18 @@ def generate_funding_history(prices, seed=42):
             rv = 0.5
 
         # Funding = f(momentum, vol, noise)
-        base_funding = mom_20d * 0.005  # momentum drives funding direction
-        vol_component = rv * 0.0001     # high vol -> slightly positive funding
-        noise = rng.normal(0, 0.0003)   # random noise
+        base_funding = mom_20d * 0.003  # momentum drives funding direction
+        vol_component = rv * 0.00005    # high vol -> slightly positive funding
+        noise = rng.normal(0, 0.0002)   # random noise
 
         for j in range(3):
             idx = i * 3 + j
             if idx < len(funding_8h):
                 # Add intraday variation
-                intraday_noise = rng.normal(0, 0.0001)
+                intraday_noise = rng.normal(0, 0.00005)
                 funding_8h[idx] = np.clip(
                     base_funding + vol_component + noise + intraday_noise,
-                    -0.01, 0.01  # cap at +-1% per 8h
+                    -0.005, 0.005  # cap at +-0.5% per 8h
                 )
 
     # Aggregate to daily (sum of 3 settlements)
@@ -158,7 +158,7 @@ def rolling_backtest_asset(opens, highs, lows, closes, funding_daily,
     n_levels   = 12
     step_bps   = 30
     order_sz   = 0.015
-    crisis_vol = 0.80
+    crisis_vol = 0.35
 
     # EMA
     ema = np.empty(N); ema[0] = closes[0]
@@ -360,12 +360,12 @@ def perm_test(s,b):
 # ──────────────────────────────────────────────────────────────
 def main():
     print('='*95)
-    print('  HIP-3 ROLLING TIME-SERIES BACKTEST')
+    print('  HIP-3 ROLLING TIME-SERIES BACKTEST (Equities / Commodities / ETFs)')
     print('  ARIMA(2,1,2) + EWMA-Vol + Variable Funding + IV Arb + Greeks')
     print('  Expanding window | Re-fit every 30 bars | 15 assets x 730 days')
     print('='*95)
 
-    print('\nGenerating synthetic HIP-3 data (15 assets, 730d) ...')
+    print('\nGenerating synthetic HIP-3 data (equities/commodities/ETFs, 730d) ...')
     data = generate_synthetic_hip3_data(n_assets=15, n_days=730)
     arb_engine = IVArbitrageEngine()
     greeks_engine = GreeksStrategyEngine()
