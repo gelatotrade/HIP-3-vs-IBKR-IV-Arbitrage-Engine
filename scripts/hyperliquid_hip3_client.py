@@ -35,39 +35,38 @@ BASE_URL = "https://api.hyperliquid.xyz/info"
 # HIP-3 mainnet: Oct 13, 2025. Equity perps followed from Nov 2025.
 # Reference date for n_days calculation: Apr 15, 2026.
 HIP3_LAUNCH_DATES = {
-    # ── Wave 1: Core equities (Nov 9-13, 2025) ──
-    "AAPL":   datetime(2025, 11, 9),    # 157 days
-    "MSFT":   datetime(2025, 11, 12),   # 154 days
-    "NVDA":   datetime(2025, 11, 13),   # 153 days
-    "TSLA":   datetime(2025, 11, 13),   # 153 days
-    # ── Wave 2: More equities (late Nov 2025) ──
-    "GOOG":   datetime(2025, 11, 20),   # 146 days
-    "AMZN":   datetime(2025, 11, 20),   # 146 days
-    "META":   datetime(2025, 11, 22),   # 144 days
-    "AMD":    datetime(2025, 11, 25),   # 141 days
-    "NFLX":   datetime(2025, 11, 25),   # 141 days
-    "COIN":   datetime(2025, 11, 28),   # 138 days
-    # ── Wave 3: Extended equities (Dec 2025) ──
-    "PLTR":   datetime(2025, 12, 5),    # 131 days
-    "MSTR":   datetime(2025, 12, 5),    # 131 days
-    "GME":    datetime(2025, 12, 8),    # 128 days
-    "UBER":   datetime(2025, 12, 15),   # 121 days
-    "SQ":     datetime(2025, 12, 15),   # 121 days
-    "SHOP":   datetime(2025, 12, 18),   # 118 days
-    "ARM":    datetime(2025, 12, 20),   # 116 days
-    "SMCI":   datetime(2025, 12, 22),   # 114 days
-    "NKE":    datetime(2025, 12, 22),   # 114 days
-    "SNOW":   datetime(2025, 12, 20),   # 116 days
-    # ── Commodities (Dec 2025) ──
-    "GOLD":   datetime(2025, 12, 10),   # 126 days
-    "OIL":    datetime(2025, 12, 12),   # 124 days
-    "SILVER": datetime(2025, 12, 15),   # 121 days
-    # ── ETFs & Indices (Mar 2026) ──
-    "SPY":    datetime(2026, 3, 18),    # 28 days
-    "QQQ":    datetime(2026, 3, 20),    # 26 days
+    # Verified from Hyperliquid API `candleSnapshot` first-candle dates and on-chain
+    # perpDexs metadata (research date: 2026-04-16). HIP-3 mainnet launched 2025-10-13
+    # with xyz:XYZ100 (Nasdaq-100 proxy). Dates are first-trade UTC dates on HIP-3 DEXes
+    # (xyz, flx, vntl, km, cash). Assets not deployed on any HIP-3 DEX are excluded.
+    #
+    # ── Indices / Nasdaq-100 proxy (HIP-3 day zero) ──
+    "QQQ":    datetime(2025, 10, 13),   # xyz:XYZ100 — first HIP-3 market ever
+    # ── Wave 1: core equities on xyz (Nov 2025) ──
+    "NVDA":   datetime(2025, 11, 12),   # xyz:NVDA
+    "TSLA":   datetime(2025, 11, 13),   # xyz:TSLA (flx:TSLA same day, Felix's first)
+    "PLTR":   datetime(2025, 11, 14),   # xyz:PLTR
+    "AMZN":   datetime(2025, 11, 18),   # xyz:AMZN
+    "GOOGL":  datetime(2025, 11, 18),   # xyz:GOOGL (GOOG class shares not on HIP-3)
+    "MSFT":   datetime(2025, 11, 19),   # xyz:MSFT
+    "META":   datetime(2025, 11, 20),   # xyz:META
+    "AAPL":   datetime(2025, 11, 21),   # xyz:AAPL
+    "COIN":   datetime(2025, 11, 25),   # xyz:COIN (flx:COIN same day)
+    # ── Wave 2: more equities (Dec 2025) ──
+    "MSTR":   datetime(2025, 12, 2),    # xyz:MSTR
+    "AMD":    datetime(2025, 12, 4),    # xyz:AMD
+    "NFLX":   datetime(2025, 12, 8),    # xyz:NFLX
+    # ── Commodities (Dec 2025 via Felix) ──
+    "GOLD":   datetime(2025, 12, 12),   # flx:GOLD (earliest HIP-3 gold market)
+    "SILVER": datetime(2025, 12, 17),   # flx:SILVER
+    # ── Oil (Jan 2026) ──
+    "OIL":    datetime(2026, 1, 6),     # xyz:CL (WTI); flx:OIL three days later
+    # ── S&P 500 (licensed) — SPY has too little history for backtest, included for completeness ──
+    "SPY":    datetime(2026, 3, 18),    # xyz:SP500 — officially S&P DJI licensed
 }
 
-REFERENCE_DATE = datetime(2026, 4, 15)
+# Reference date for computing "days since launch". Update on each run.
+REFERENCE_DATE = datetime(2026, 4, 16)
 
 HIP3_TOKENS = list(HIP3_LAUNCH_DATES.keys())
 
@@ -437,13 +436,13 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = None,
     """
     rng = np.random.default_rng(seed)
 
-    # Synthetic HIP-3 tokens: equities, commodities, ETFs
+    # Synthetic HIP-3 tokens: verified HIP-3 listings only (via Hyperliquid API)
     # (name, start_price, ann_vol, drift_mult)
     token_params = {
         # ── US Equities ──
         "AAPL":   (185.0,  0.28, 1.10),
         "MSFT":   (375.0,  0.25, 1.08),
-        "GOOG":   (140.0,  0.30, 1.05),
+        "GOOGL":  (140.0,  0.30, 1.05),
         "AMZN":   (155.0,  0.32, 1.10),
         "NVDA":   (480.0,  0.50, 1.25),
         "META":   (350.0,  0.38, 1.12),
@@ -451,22 +450,13 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = None,
         "AMD":    (145.0,  0.45, 1.15),
         "NFLX":   (485.0,  0.35, 1.08),
         "COIN":   ( 95.0,  0.60, 0.95),
-        # ── Extended equities ──
         "PLTR":   ( 70.0,  0.45, 1.10),
         "MSTR":   (350.0,  0.60, 1.05),
-        "GME":    ( 28.0,  0.55, 0.90),
-        "UBER":   ( 75.0,  0.35, 1.08),
-        "SQ":     ( 80.0,  0.45, 1.05),
-        "SHOP":   ( 90.0,  0.40, 1.10),
-        "ARM":    (145.0,  0.45, 1.15),
-        "SMCI":   ( 40.0,  0.65, 1.00),
-        "NKE":    ( 72.0,  0.30, 0.95),
-        "SNOW":   (170.0,  0.40, 1.05),
         # ── Commodities ──
         "GOLD":   (2050.0, 0.15, 1.02),
         "OIL":    (  75.0, 0.35, 0.90),
         "SILVER": (  24.0, 0.25, 0.98),
-        # ── ETFs / Indices ──
+        # ── Indices ──
         "SPY":    (475.0,  0.18, 1.08),
         "QQQ":    (410.0,  0.22, 1.12),
     }
