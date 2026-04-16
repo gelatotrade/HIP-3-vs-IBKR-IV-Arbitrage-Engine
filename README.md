@@ -1,6 +1,6 @@
 # Searching for Alpha — HIP-3 vs IBKR IV Arbitrage Engine
 
-A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **25 real-world assets** — US equities (AAPL, NVDA, TSLA, META, …), commodities (GOLD, SILVER, OIL), and indices (SPY, QQQ). Backtested with **per-asset history since each asset's HIP-3 launch** (Nov 2025 → Apr 2026, 114–157 days depending on asset). Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 15 bars, **variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
+A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **17 verified HIP-3 assets** — US equities (AAPL, NVDA, TSLA, META, MSTR, PLTR, COIN, …), commodities (GOLD, SILVER, OIL), and indices (QQQ/XYZ100, SP500). Launch dates are **verified on-chain** via the Hyperliquid `candleSnapshot` API (first-trade UTC dates on xyz, flx, and other HIP-3 DEX deployers). Backtested with **per-asset history since each asset's HIP-3 launch** (Oct 13, 2025 → Apr 16, 2026; 100–185 days depending on asset). Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 15 bars, **variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
 
 **Forked from:** [Market-Making-Engine-Regime-Change](https://github.com/gelatotrade/Market-Making-Engine-Regime-Change-)
 
@@ -65,17 +65,17 @@ HIP-3 perpetual contracts have **linear payoff** — they don't price gamma, van
 
 ## Out-of-Sample Equity Curves (Top 6 Assets)
 
-Walk-forward backtest: 60% train / 40% test across 23 HIP-3 assets with **per-asset history since each launch date** (114–157 days). Strategy (colored) vs. buy-and-hold benchmark (grey). Green fill = alpha, red fill = underperformance.
+Walk-forward backtest: 60% train / 40% test across 16 verified HIP-3 assets with **per-asset history since each on-chain launch date** (100–185 days; SPY skipped at 29 days). Strategy (colored) vs. buy-and-hold benchmark (grey). Green fill = alpha, red fill = underperformance.
 
 ![Equity Curves Animated](docs/img/hip3_equity_curves.gif)
 
-> All 23 assets show positive out-of-sample alpha. Top performers include PLTR (+275.8%), NVDA (+184.4%), SQ (+183.7%), and COIN (+155.7%). The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, variable funding rates, and a Greeks strategy ensemble.
+> All 16 assets show positive out-of-sample alpha. Top performers include MSTR (+375.3%), COIN (+211.7%), AMD (+156.0%), and TSLA (+155.0%). The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, variable funding rates, and a Greeks strategy ensemble.
 
 ---
 
 ## Vol Spread Heatmap — All Assets Over Time
 
-The heatmap shows the IV spread (HIP-3 minus IBKR) across all 23 assets over time. Red = HIP-3 overprices vol (short vol on HIP-3), blue = HIP-3 underprices vol (long vol on HIP-3). Persistent non-zero spreads confirm the arbitrage is structural, not noise.
+The heatmap shows the IV spread (HIP-3 minus IBKR) across all 16 assets over time. Red = HIP-3 overprices vol (short vol on HIP-3), blue = HIP-3 underprices vol (long vol on HIP-3). Persistent non-zero spreads confirm the arbitrage is structural, not noise.
 
 ![Vol Spread Heatmap](docs/img/hip3_vol_spread_heatmap.png)
 
@@ -103,58 +103,77 @@ The engine detects 5 market regimes using 20-day rolling volatility, momentum, a
 ![Arbitrage Summary](docs/img/hip3_arbitrage_summary.png)
 
 **Four panels:**
-- **Top-Left**: Out-of-sample alpha by asset — all 23 positive (PLTR leads at +275.8%)
-- **Top-Right**: Sharpe ratio comparison (strategy vs. benchmark) — META highest at 7.69
-- **Bottom-Left**: Max drawdown comparison (strategy vs. benchmark) — strategy cuts DD by ~31%
-- **Bottom-Right**: Calmar ratio by asset — GOLD leads at 37.51
+- **Top-Left**: Out-of-sample alpha by asset — all 16 positive (MSTR leads at +375.3%)
+- **Top-Right**: Sharpe ratio comparison (strategy vs. benchmark) — META highest at 11.68
+- **Bottom-Left**: Max drawdown comparison (strategy vs. benchmark) — strategy cuts DD by ~40%
+- **Bottom-Right**: Calmar ratio by asset — META leads at 140.78
 
 ---
 
 ## Out-of-Sample Results
 
+### Verified HIP-3 Launch Dates (On-Chain)
+
+All launch dates were verified via the Hyperliquid `candleSnapshot` API (first on-chain 1d candle per market). HIP-3 mainnet went live on **2025-10-13** with `xyz:XYZ100` (Nasdaq-100 proxy, the first HIP-3 market ever). Sources: Hyperliquid API `perpDexs` metadata, [S&P DJI press release](https://press.spglobal.com/2026-03-18-S-P-Dow-Jones-Indices-Licenses-S-P-500-R-to-Trade-XYZ-for-Perpetual-Contracts-on-Hyperliquid), [Felix TSLA launch blog](https://blog.redstone.finance/2025/11/13/felix-launches-its-first-hyperliquid-hip-3-market-with-tsla-powered-by-hyperstone/).
+
+| Asset | HIP-3 Ticker | Launch Date | Days Live | Deployer |
+|-------|-------------|-------------|-----------|----------|
+| QQQ | xyz:XYZ100 | 2025-10-13 | 185 | xyz (first HIP-3 market) |
+| NVDA | xyz:NVDA | 2025-11-12 | 155 | xyz |
+| TSLA | xyz:TSLA / flx:TSLA | 2025-11-13 | 154 | xyz, Felix |
+| PLTR | xyz:PLTR | 2025-11-14 | 153 | xyz |
+| AMZN | xyz:AMZN | 2025-11-18 | 149 | xyz |
+| GOOGL | xyz:GOOGL | 2025-11-18 | 149 | xyz (GOOGL class; GOOG not listed) |
+| MSFT | xyz:MSFT | 2025-11-19 | 148 | xyz |
+| META | xyz:META | 2025-11-20 | 147 | xyz |
+| AAPL | xyz:AAPL | 2025-11-21 | 146 | xyz |
+| COIN | xyz:COIN / flx:COIN | 2025-11-25 | 142 | xyz, Felix |
+| MSTR | xyz:MSTR | 2025-12-02 | 135 | xyz |
+| AMD | xyz:AMD | 2025-12-04 | 133 | xyz |
+| NFLX | xyz:NFLX | 2025-12-08 | 129 | xyz |
+| GOLD | flx:GOLD | 2025-12-12 | 125 | Felix |
+| SILVER | flx:SILVER | 2025-12-17 | 120 | Felix |
+| OIL | xyz:CL (WTI) | 2026-01-06 | 100 | xyz |
+| SPY | xyz:SP500 | 2026-03-18 | 29 | xyz (officially S&P DJI licensed) |
+
+> **Excluded from backtests** (too short, delisted, or not actually on HIP-3): GME (delisted 2026-02-03), UBER, SQ, SHOP, ARM, SMCI, NKE, SNOW (none deployed on any HIP-3 DEX as of 2026-04-16). SPY is loaded but skipped in the backtest (only 29 days < MIN_TRAIN + MIN_TEST).
+
 ### Performance Table (Walk-Forward, 60/40 Split, Per-Asset History Since HIP-3 Launch)
 
 | Asset | Days | Alpha | Sharpe | S.Bench | Calmar | MaxDD | DD.Bench | t-stat | df | p(t) | p(Perm) |
 |-------|------|-------|--------|---------|--------|-------|----------|--------|----|----|---------|
-| **PLTR** | 131 | **+275.8%** | 4.29 | 0.12 | 10.67 | 26.7% | 40.2% | **3.59** | 52 | <0.001 | <0.001 |
-| **NVDA** | 153 | **+184.4%** | 4.16 | 1.38 | 19.32 | 14.0% | 21.4% | **10.78** | 61 | <0.001 | <0.001 |
-| **SQ** | 121 | **+183.7%** | 3.92 | 1.10 | 17.79 | 14.2% | 17.5% | **10.17** | 48 | <0.001 | <0.001 |
-| **ARM** | 116 | **+182.9%** | -1.89 | -5.20 | -7.38 | 13.3% | 31.4% | **11.40** | 46 | <0.001 | <0.001 |
-| **COIN** | 138 | **+155.7%** | 3.31 | 1.08 | 14.86 | 16.0% | 22.6% | **2.92** | 55 | 0.003 | <0.001 |
-| **UBER** | 121 | **+141.5%** | 5.66 | 3.98 | 34.96 | 13.2% | 15.4% | **8.10** | 48 | <0.001 | <0.001 |
-| **AMD** | 141 | **+131.5%** | 2.84 | -0.07 | 12.40 | 10.3% | 14.5% | **9.56** | 56 | <0.001 | <0.001 |
-| **GME** | 128 | **+122.4%** | 3.16 | -0.20 | 12.32 | 9.4% | 15.8% | **8.70** | 51 | <0.001 | <0.001 |
-| **SNOW** | 116 | **+120.0%** | 5.70 | 3.19 | 26.91 | 9.7% | 11.0% | **8.29** | 46 | <0.001 | <0.001 |
-| **AMZN** | 146 | **+113.7%** | 1.00 | -2.08 | 3.44 | 10.7% | 21.4% | **11.84** | 58 | <0.001 | <0.001 |
-| **NKE** | 114 | **+110.6%** | 2.55 | -0.43 | 12.17 | 7.8% | 10.2% | **6.67** | 45 | <0.001 | <0.001 |
-| **TSLA** | 153 | **+106.4%** | 1.90 | -0.22 | 5.53 | 17.1% | 29.0% | **4.85** | 61 | <0.001 | <0.001 |
-| **SHOP** | 118 | **+105.7%** | 4.76 | 2.44 | 27.46 | 7.8% | 9.1% | **8.63** | 47 | <0.001 | <0.001 |
-| **MSTR** | 131 | **+102.2%** | 1.01 | -0.84 | 3.40 | 15.2% | 21.3% | **1.77** | 52 | 0.041 | 0.044 |
-| **SMCI** | 114 | **+100.7%** | -0.51 | -1.48 | -1.25 | 41.3% | 44.6% | **2.34** | 45 | 0.012 | 0.011 |
-| **NFLX** | 141 | **+100.1%** | 3.21 | 1.36 | 20.42 | 8.4% | 10.9% | **7.14** | 56 | <0.001 | <0.001 |
-| **OIL** | 124 | **+95.7%** | 3.81 | 0.58 | 19.43 | 5.8% | 11.4% | **12.96** | 49 | <0.001 | <0.001 |
-| **META** | 144 | **+93.7%** | 7.69 | 4.69 | 37.12 | 6.1% | 7.5% | **11.85** | 57 | <0.001 | <0.001 |
-| **AAPL** | 157 | **+81.3%** | 2.47 | -0.08 | 7.44 | 10.6% | 15.8% | **12.53** | 62 | <0.001 | <0.001 |
-| **SILVER** | 121 | **+73.2%** | 2.49 | 0.02 | 9.29 | 7.9% | 12.5% | **10.37** | 48 | <0.001 | <0.001 |
-| **GOOG** | 146 | **+71.4%** | 1.73 | -0.58 | 6.10 | 8.5% | 12.2% | **4.34** | 58 | <0.001 | <0.001 |
-| **MSFT** | 154 | **+64.6%** | 4.45 | 1.47 | 29.83 | 3.2% | 5.7% | **8.16** | 61 | <0.001 | <0.001 |
-| **GOLD** | 126 | **+37.7%** | 7.18 | 4.57 | 37.51 | 2.4% | 3.4% | **7.24** | 50 | <0.001 | <0.001 |
+| **MSTR** | 135 | **+375.3%** | 2.93 | -1.27 | 15.92 | 16.4% | 32.1% | **12.37** | 53 | <0.001 | <0.001 |
+| **COIN** | 142 | **+211.7%** | -2.17 | -4.29 | -5.24 | 27.0% | 43.6% | **2.79** | 56 | 0.004 | 0.002 |
+| **AMD** | 133 | **+156.0%** | 3.17 | 0.10 | 20.24 | 8.0% | 13.5% | **3.64** | 53 | <0.001 | <0.001 |
+| **TSLA** | 154 | **+155.0%** | -0.19 | -2.91 | -0.35 | 19.9% | 40.4% | **1.92** | 61 | 0.030 | 0.025 |
+| **META** | 147 | **+149.8%** | 11.68 | 8.15 | 140.78 | 3.2% | 4.9% | **13.55** | 58 | <0.001 | <0.001 |
+| **PLTR** | 153 | **+130.8%** | 0.89 | -1.92 | 2.40 | 17.2% | 25.2% | **8.54** | 60 | <0.001 | <0.001 |
+| **NFLX** | 129 | **+113.8%** | -1.51 | -3.90 | -3.05 | 16.8% | 30.2% | **2.59** | 51 | 0.006 | 0.004 |
+| **GOOGL** | 149 | **+105.5%** | 2.87 | 0.35 | 18.47 | 6.5% | 16.2% | **8.73** | 59 | <0.001 | <0.001 |
+| **AMZN** | 149 | **+100.1%** | 4.03 | 0.90 | 30.53 | 4.2% | 7.3% | **12.06** | 59 | <0.001 | <0.001 |
+| **OIL** | 100 | **+93.4%** | 3.90 | 0.79 | 24.33 | 4.9% | 7.8% | **8.33** | 39 | <0.001 | <0.001 |
+| **AAPL** | 146 | **+87.8%** | 5.76 | 3.55 | 40.44 | 5.2% | 6.0% | **11.77** | 58 | <0.001 | <0.001 |
+| **MSFT** | 148 | **+78.3%** | 4.32 | 1.33 | 21.18 | 5.3% | 7.2% | **11.58** | 59 | <0.001 | <0.001 |
+| **NVDA** | 155 | **+67.8%** | 0.79 | -0.51 | 2.64 | 14.7% | 19.6% | **1.54** | 61 | 0.065 | 0.067 |
+| **SILVER** | 120 | **+57.5%** | 5.07 | 2.80 | 32.75 | 3.8% | 4.4% | **10.06** | 47 | <0.001 | <0.001 |
+| **QQQ** | 185 | **+48.9%** | 1.99 | 0.06 | 7.59 | 6.6% | 9.0% | **6.53** | 73 | <0.001 | <0.001 |
+| **GOLD** | 125 | **+32.6%** | 5.18 | 3.09 | 21.80 | 3.5% | 4.3% | **5.24** | 49 | <0.001 | <0.001 |
 
-> Each asset backtested over its actual HIP-3 history (114–157 days since launch). SPY/QQQ excluded (< 30 days history). **Paired t-test** on excess returns (strategy − benchmark) with t-distribution: **23/23 significant** at α = 0.05 (t-stats from 1.77 to 12.96). All permutation p-values significant.
+> Each asset backtested over its verified on-chain HIP-3 history (100–185 days since launch). SPY excluded (only 29 days available, < MIN_TRAIN + MIN_TEST). **Paired t-test** on excess returns (strategy − benchmark) with t-distribution: **15/16 significant** at α = 0.05 (t-stats from 1.54 to 13.55; only NVDA falls short at p=0.065). All other permutation p-values significant.
 
 ### Summary Statistics
 
 | Metric | Strategy | Benchmark | Improvement |
 |--------|----------|-----------|-------------|
-| **Backtest period** | **114–157 days per asset** (Nov 2025 → Apr 2026) | — | Since each asset's HIP-3 launch |
-| **Positive alpha** | **23 / 23 assets** | — | — |
-| **Mean alpha** | **+119.8%** | — | — |
-| **Mean Sharpe** | **3.26** | 0.64 | — |
-| **Mean Calmar** | **15.64** | — | — |
-| **Mean MaxDD** | 12.2% | 17.6% | -31% (lower risk) |
-| **Mean fills/day** | **23** | — | — |
-| **Mean IV arb/yr** | -6.6% | — | — |
-| **Assets tested** | US equities, commodities, ETFs | — | 25 HIP-3 markets |
+| **Backtest period** | **100–185 days per asset** (Oct 13 2025 → Apr 16 2026) | — | Since each asset's verified on-chain HIP-3 launch |
+| **Positive alpha** | **16 / 16 assets** | — | — |
+| **Mean alpha** | **+122.8%** | — | — |
+| **Mean Sharpe** | **3.04** | 0.40 | — |
+| **Mean Calmar** | **23.15** | — | — |
+| **Mean MaxDD** | 10.2% | 17.0% | -40% (lower risk) |
+| **Mean fills/day** | **22** | — | — |
+| **Mean IV arb/yr** | +1.4% | — | — |
+| **Assets tested** | 12 US equities, 3 commodities, 1 index | — | 17 verified HIP-3 markets |
 
 ---
 
@@ -185,7 +204,7 @@ The engine exploits the fact that HIP-3 perps have **linear payoff** (no Greeks)
 
 ```
 scripts/
-├── hyperliquid_hip3_client.py      # HIP-3 API client (25 assets: equities, commodities, ETFs)
+├── hyperliquid_hip3_client.py      # HIP-3 API client (17 verified HIP-3 assets)
 ├── ibkr_options_client.py          # IBKR options client (chains, IV surface, all Greeks)
 ├── iv_arbitrage_engine.py          # IV arb engine (vol spread, term structure, skew)
 ├── greeks_strategies.py            # 7 Greeks strategies (gamma, vanna, charm, vomma, speed, color, zomma)
@@ -300,13 +319,13 @@ All results validated with **proper t-statistics** (t-distribution, not normal a
 
 | Test | Method | Significant | Notes |
 |------|--------|-------------|-------|
-| **Paired t-test** | One-sided t-test on excess returns (strategy − benchmark), t-distribution with n−1 df | **23/23** | Primary test. t-stats: 1.77 – 12.96. All p < 0.05 |
-| **Sharpe t-test** | Lo (2002) autocorrelation-adjusted SE, t-distribution | **21/23** | ARM and SMCI have negative Sharpe but positive alpha |
-| **Block Bootstrap** | 3,000 circular block resamples (block=15) | **8/23** | Lower power with 46–62 test bars |
-| **Permutation test** | 3,000 random sign-flip reassignments | **23/23** | Non-parametric confirmation |
-| **Deflated Sharpe** | Bailey & Lopez de Prado (2014) multiple-testing adjustment | **10/23** | Conservative with 432 grid combos |
+| **Paired t-test** | One-sided t-test on excess returns (strategy − benchmark), t-distribution with n−1 df | **15/16** | Primary test. t-stats: 1.54 – 13.55. Only NVDA non-sig (p=0.065) |
+| **Sharpe t-test** | Lo (2002) autocorrelation-adjusted SE, t-distribution | **13/16** | COIN/TSLA/NFLX have positive alpha but negative Sharpe |
+| **Block Bootstrap** | 3,000 circular block resamples (block=15) | **7/16** | Lower power with 40–74 test bars |
+| **Permutation test** | 3,000 random sign-flip reassignments | **15/16** | Non-parametric confirmation |
+| **Deflated Sharpe** | Bailey & Lopez de Prado (2014) multiple-testing adjustment | **7/16** | Conservative with 432 grid combos |
 
-> The paired t-test is the primary significance measure. H₀: mean(strategy − benchmark) = 0. With 46–62 out-of-sample bars per asset, the t-distribution (not normal) is the correct reference distribution for finite-sample inference. All 23 assets reject H₀ at α = 0.05.
+> The paired t-test is the primary significance measure. H₀: mean(strategy − benchmark) = 0. With 40–74 out-of-sample bars per asset, the t-distribution (not normal) is the correct reference distribution for finite-sample inference. 15 of 16 assets reject H₀ at α = 0.05.
 
 ---
 
@@ -328,14 +347,14 @@ The optimizer searches 432 combinations and selects per-asset optimal parameters
 
 ## Hyperliquid HIP-3 API
 
-The client connects to the Hyperliquid API to fetch all 25 HIP-3 perp markets (US equities, commodities, ETFs/indices):
+The client connects to the Hyperliquid API to fetch all 17 verified HIP-3 perp markets (US equities, commodities, indices):
 
 ```python
 from hyperliquid_hip3_client import HyperliquidHIP3Client
 
 client = HyperliquidHIP3Client()
 
-# Discover all 25 HIP-3 perp markets (equities, commodities, ETFs)
+# Discover all 17 verified HIP-3 perp markets (equities, commodities, indices)
 markets = client.get_all_hip3_markets()
 
 # Fetch OHLCV candle history
