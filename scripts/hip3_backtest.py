@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HIP-3 Market Backtest — Walk-Forward with IV Arbitrage & Greeks Strategies.
+HIP-3 Market Backtest — Purged K-Fold CV with IV Arbitrage & Greeks Strategies.
 
 Architecture:
   1. BASE: Long/short HIP-3 spot tokens based on regime + momentum
@@ -8,8 +8,14 @@ Architecture:
   3. GREEKS: Second/third order Greek strategies ensemble
   4. REGIME: Controls position sizing, spread width, strategy selection
 
-Walk-forward: 60% train / 40% test
-Statistical validation: paired t-test (t-distribution), Sharpe t-test (Lo 2002), block bootstrap, permutation test, deflated SR
+Methodology: Purged expanding-window K-fold CV (Lopez de Prado 2018, Ch.7)
+  - Expanding training window with purge + embargo gap at fold boundaries
+  - Hansen's SPA test (2005) for multiple-testing correction across 432 param combos
+  - Deflated Sharpe Ratio (Bailey & Lopez de Prado 2014)
+  - Fold-level Sharpe distribution for robustness assessment
+
+Statistical validation: paired t-test (t-distribution), Sharpe t-test (Lo 2002),
+  block bootstrap, permutation test, deflated SR, Hansen's SPA
 
 Usage:  python3 scripts/hip3_backtest.py
 """
@@ -30,9 +36,10 @@ from iv_arbitrage_engine import IVArbitrageEngine
 from greeks_strategies import GreeksStrategyEngine, classify_regime
 
 # ── Config ──
-TRAIN_PCT      = 0.60
-MIN_TRAIN_BARS = 60
-MIN_TEST_BARS  = 30
+PURGE_BARS     = 2
+EMBARGO_BARS   = 3
+MIN_TRAIN_BARS = 40
+MIN_TEST_BARS  = 15
 
 PARAM_GRID = {
     'n_levels':       [8, 12, 18],
@@ -137,7 +144,7 @@ def run_hip3_backtest(opens, highs, lows, closes, params, hip3_iv, ibkr_iv):
 
 def compute_metrics(s, b, fills, spread_pnl, iv_pnl):
     n = len(s)
-    if n < 30:
+    if n < min(MIN_TEST_BARS, 15):
         return None
     ann = 365
     ann_s = np.mean(s) * ann
@@ -176,39 +183,106 @@ def compute_metrics(s, b, fills, spread_pnl, iv_pnl):
     }
 
 
-def walk_forward(o, h, l, c, hip3_iv, ibkr_iv):
+def purged_kfold_cv(o, h, l, c, hip3_iv, ibkr_iv):
+    """Purged expanding-window K-fold CV (Lopez de Prado 2018, Ch.7).
+
+    For each fold k, train on [0, fold_start - purge - embargo) and test on fold k.
+    Purge+embargo gaps prevent information leakage at fold boundaries.
+    All 432 param combos evaluated on each test fold for Hansen's SPA test.
+    """
     N = len(c)
-    split = int(N * TRAIN_PCT)
-    if split < MIN_TRAIN_BARS or (N - split) < MIN_TEST_BARS:
-        return None
+    fold_size = max(N // 5, 20)
+    boundaries = list(range(0, N, fold_size))
+    if boundaries[-1] != N:
+        boundaries.append(N)
 
     keys = list(PARAM_GRID.keys())
     combos = list(product(*[PARAM_GRID[k] for k in keys]))
+    n_combos = len(combos)
 
-    best_score, best_params = -999, dict(zip(keys, combos[0]))
-    for combo in combos:
-        params = dict(zip(keys, combo))
+    all_oos_strat = []
+    all_oos_bench = []
+    fold_sharpes = []
+    fold_params = []
+    total_fills = 0
+    total_spread = 0.0
+    total_iv_pnl = 0.0
+    n_folds_used = 0
+    first_test_start = None
+    combo_oos_excess = [[] for _ in range(n_combos)]
+
+    for k in range(1, len(boundaries) - 1):
+        test_start = boundaries[k]
+        test_end = boundaries[k + 1]
+        test_len = test_end - test_start
+        train_end = max(0, test_start - PURGE_BARS - EMBARGO_BARS)
+
+        if train_end < MIN_TRAIN_BARS or test_len < MIN_TEST_BARS:
+            continue
+
+        if first_test_start is None:
+            first_test_start = test_start
+
+        best_score, best_idx = -999, 0
+        for ci, combo in enumerate(combos):
+            params = dict(zip(keys, combo))
+            s, b, fl, sp, iv = run_hip3_backtest(
+                o[:train_end], h[:train_end], l[:train_end], c[:train_end],
+                params, hip3_iv[:train_end], ibkr_iv[:train_end])
+            m = compute_metrics(s, b, fl, sp, iv)
+            if m:
+                score = m['sharpe']*0.3 + m['calmar']*0.2 + m['alpha']*5.0 + m['iv_arb_ann']*3.0
+                if score > best_score:
+                    best_score, best_idx = score, ci
+
+        for ci, combo in enumerate(combos):
+            params = dict(zip(keys, combo))
+            s_c, b_c, _, _, _ = run_hip3_backtest(
+                o[test_start:test_end], h[test_start:test_end],
+                l[test_start:test_end], c[test_start:test_end],
+                params, hip3_iv[test_start:test_end], ibkr_iv[test_start:test_end])
+            combo_oos_excess[ci].extend(list(s_c - b_c))
+
+        best_params = dict(zip(keys, combos[best_idx]))
         s, b, fl, sp, iv = run_hip3_backtest(
-            o[:split], h[:split], l[:split], c[:split],
-            params, hip3_iv[:split], ibkr_iv[:split])
-        m = compute_metrics(s, b, fl, sp, iv)
-        if m:
-            score = m['sharpe']*0.3 + m['calmar']*0.2 + m['alpha']*5.0 + m['iv_arb_ann']*3.0
-            if score > best_score:
-                best_score, best_params = score, params
+            o[test_start:test_end], h[test_start:test_end],
+            l[test_start:test_end], c[test_start:test_end],
+            best_params, hip3_iv[test_start:test_end], ibkr_iv[test_start:test_end])
 
-    s, b, fl, sp, iv = run_hip3_backtest(
-        o[split:], h[split:], l[split:], c[split:],
-        best_params, hip3_iv[split:], ibkr_iv[split:])
-    m = compute_metrics(s, b, fl, sp, iv)
+        all_oos_strat.extend(list(s))
+        all_oos_bench.extend(list(b))
+        total_fills += fl
+        total_spread += sp
+        total_iv_pnl += iv
+        n_folds_used += 1
+        fold_params.append(best_params)
+
+        if len(s) >= 10:
+            mu = np.mean(s) * 365
+            sig = np.std(s, ddof=1) * np.sqrt(365)
+            fold_sharpes.append(mu / sig if sig > 1e-10 else 0)
+
+    if n_folds_used == 0 or len(all_oos_strat) < MIN_TEST_BARS:
+        return None
+
+    sr = np.array(all_oos_strat)
+    br = np.array(all_oos_bench)
+    m = compute_metrics(sr, br, total_fills, total_spread, total_iv_pnl)
     if m is None:
         return None
-    m.update(best_params)
+
+    m.update(fold_params[-1])
     m['train_score'] = best_score
-    m['train_bars']  = split
-    m['test_bars']   = N - split
-    m['strat_returns'] = s
-    m['bench_returns'] = b
+    m['train_bars'] = train_end
+    m['test_bars'] = len(sr)
+    m['strat_returns'] = sr
+    m['bench_returns'] = br
+    m['n_folds'] = n_folds_used
+    m['fold_sharpes'] = fold_sharpes
+    m['sharpe_std'] = np.std(fold_sharpes, ddof=1) if len(fold_sharpes) > 1 else 0.0
+    m['oos_pct'] = len(sr) / N
+    m['combo_oos_excess'] = combo_oos_excess
+    m['first_test_start'] = first_test_start
     return m
 
 
@@ -274,6 +348,53 @@ def deflated_sr(sr,nt,no):
     return {'dsr':p,'significant':p>0.95}
 
 
+def _stationary_bootstrap_indices(n, avg_block, rng):
+    indices = []
+    idx = rng.integers(0, n)
+    while len(indices) < n:
+        indices.append(idx % n)
+        if rng.random() < 1.0 / avg_block:
+            idx = rng.integers(0, n)
+        else:
+            idx += 1
+    return np.array(indices[:n])
+
+
+def hansen_spa_test(combo_oos_excess, n_boot=N_BOOTSTRAP):
+    """Hansen (2005) Superior Predictive Ability test (consistent version).
+    Tests H0: no parameter combination outperforms the benchmark
+    after correcting for multiple testing across all 432 combos.
+    Uses stationary bootstrap (Politis & Romano 1994).
+    """
+    valid = [np.array(r) for r in combo_oos_excess if len(r) >= 10]
+    if len(valid) < 2:
+        return {'spa_pval': 1.0, 'spa_sig': False}
+
+    n = min(len(r) for r in valid)
+    D = np.array([r[:n] for r in valid])
+    d_bar = D.mean(axis=1)
+    d_std = D.std(axis=1, ddof=1)
+    d_std = np.maximum(d_std, 1e-10)
+
+    T_obs = np.max(np.sqrt(n) * d_bar / d_std)
+    mu_center = np.maximum(d_bar, 0)
+
+    avg_block = max(int(n ** (1/3)), 2)
+    rng = np.random.default_rng(42)
+
+    boot_stats = np.empty(n_boot)
+    for b in range(n_boot):
+        indices = _stationary_bootstrap_indices(n, avg_block, rng)
+        D_boot = D[:, indices]
+        boot_means = D_boot.mean(axis=1)
+        boot_stds = D_boot.std(axis=1, ddof=1)
+        boot_stds = np.maximum(boot_stds, 1e-10)
+        boot_stats[b] = np.max(np.sqrt(n) * (boot_means - mu_center) / boot_stds)
+
+    p_value = np.mean(boot_stats >= T_obs)
+    return {'spa_pval': float(p_value), 'spa_sig': p_value < SIGNIFICANCE}
+
+
 def run_greeks_backtest(prices, hip3_iv, ibkr_iv):
     engine = GreeksStrategyEngine()
     results = engine.run_all_strategies(prices, hip3_iv, ibkr_iv)
@@ -283,8 +404,8 @@ def run_greeks_backtest(prices, hip3_iv, ibkr_iv):
 
 def main():
     print('='*90)
-    print('  HIP-3 MARKET BACKTEST — IV Arbitrage + Greeks Strategies')
-    print('  HIP-3 vs IBKR | Walk-forward: 60%/40% | Regime-adaptive')
+    print('  HIP-3 MARKET BACKTEST — Purged K-Fold CV + IV Arbitrage + Greeks')
+    print('  Lopez de Prado (2018) | Hansen SPA (2005) | Regime-adaptive')
     print('='*90)
 
     print('\nGenerating HIP-3 synthetic market data (per-asset history since HIP-3 launch) ...')
@@ -292,13 +413,13 @@ def main():
 
     arb_engine = IVArbitrageEngine()
     nc = len(list(product(*PARAM_GRID.values())))
-    print(f'Grid: {nc} combos | Hyperliquid fees | IV arb + Greeks overlay')
+    print(f'Grid: {nc} combos | Purge={PURGE_BARS} Embargo={EMBARGO_BARS} | IV arb + Greeks overlay')
 
     results = []; curves = {}; greeks_results_all = {}
     t0 = time.time()
 
     for tk, df in data.items():
-        print(f'\n  {tk} ...', end=' ', flush=True)
+        print(f'\n  {tk} ({len(df)} bars) ...', end=' ', flush=True)
         o, h, l, c = df['open'].values, df['high'].values, df['low'].values, df['close'].values
         if len(c) < MIN_TRAIN_BARS + MIN_TEST_BARS:
             print(f'SKIP ({len(c)} bars)'); continue
@@ -306,14 +427,17 @@ def main():
         hip3_iv = arb_engine.compute_hip3_implied_vol(c)
         ibkr_iv = arb_engine.compute_ibkr_atm_iv(c)
 
-        wf = walk_forward(o, h, l, c, hip3_iv, ibkr_iv)
-        if wf is None:
+        cv = purged_kfold_cv(o, h, l, c, hip3_iv, ibkr_iv)
+        if cv is None:
             print('SKIP'); continue
 
-        sr = wf.pop('strat_returns'); br = wf.pop('bench_returns')
+        sr = cv.pop('strat_returns'); br = cv.pop('bench_returns')
+        combo_excess = cv.pop('combo_oos_excess')
+        fold_sh = cv.pop('fold_sharpes')
 
-        split = int(len(c) * TRAIN_PCT)
-        gk_results, gk_ensemble = run_greeks_backtest(c[split:], hip3_iv[split:], ibkr_iv[split:])
+        oos_start = cv.pop('first_test_start')
+        gk_results, gk_ensemble = run_greeks_backtest(
+            c[oos_start:], hip3_iv[oos_start:], ibkr_iv[oos_start:])
         greeks_results_all[tk] = gk_results
 
         min_len = min(len(sr), len(gk_ensemble))
@@ -324,18 +448,20 @@ def main():
         st_sr = ttest_sharpe(sr)
         st2 = block_bootstrap(sr)
         st3 = perm_test(sr, br)
-        st4 = deflated_sr(wf['sharpe'], nc, wf['test_bars'])
+        st4 = deflated_sr(cv['sharpe'], nc, cv['test_bars'])
+        st_spa = hansen_spa_test(combo_excess)
 
-        row = {'asset':tk, **wf}
-        # Paired t-test on excess returns (primary)
+        row = {'asset':tk, **cv}
         row['t_stat']=st_t['t_stat']; row['t_df']=st_t['df']
         row['t_pval']=st_t['p_value']; row['t_sig']=st_t['significant']
-        # Sharpe t-test (Lo 2002, t-distribution)
         row['sr_pval']=st_sr['p_value']; row['sr_sig']=st_sr['significant']
         row['boot_ci_lo']=st2['ci_lo']; row['boot_ci_hi']=st2['ci_hi']
         row['boot_pval']=st2['p_value']; row['boot_sig']=st2['significant']
         row['perm_pval']=st3['p_value']; row['perm_sig']=st3['significant']
         row['dsr']=st4['dsr']; row['dsr_sig']=st4['significant']
+        row['spa_pval']=st_spa['spa_pval']; row['spa_sig']=st_spa['spa_sig']
+        row['sharpe_std']=cv['sharpe_std']
+        row['fold_sharpe_mean']=np.mean(fold_sh) if fold_sh else 0.0
 
         best_greek = max(gk_results.values(), key=lambda x: x.sharpe)
         row['best_greek_strategy'] = best_greek.name
@@ -343,10 +469,11 @@ def main():
         row['greeks_ensemble_ret'] = float(np.sum(gk_ensemble))
         results.append(row)
 
-        pv = f't({st_t["df"]})={st_t["t_stat"]:.2f} p={st_t["p_value"]:.4f}  SR-p={st_sr["p_value"]:.4f}  perm-p={st3["p_value"]:.4f}'
-        print(f'Alpha={wf["alpha"]*100:+.1f}%  Sharpe={wf["sharpe"]:.2f}  '
-              f'IVarb={wf["iv_arb_ann"]*100:.1f}%  '
-              f'Greek={best_greek.name}({best_greek.sharpe:.2f})  {pv}')
+        fold_str = f'Folds={cv["n_folds"]} OOS={cv["oos_pct"]*100:.0f}%'
+        spa_str = f'SPA-p={st_spa["spa_pval"]:.3f}{"*" if st_spa["spa_sig"] else ""}'
+        pv = f't({st_t["df"]})={st_t["t_stat"]:.2f} p={st_t["p_value"]:.4f}  {spa_str}'
+        print(f'Alpha={cv["alpha"]*100:+.1f}%  Sharpe={cv["sharpe"]:.2f}±{cv["sharpe_std"]:.2f}  '
+              f'{fold_str}  {pv}')
 
     if not results: sys.exit('No results.')
     df_res = pd.DataFrame(results)
@@ -354,42 +481,48 @@ def main():
     csv = OUT_DIR / 'hip3_backtest_results.csv'
     df_res.to_csv(csv, index=False, float_format='%.6f')
 
-    print('\n'+'='*140)
-    print('  OUT-OF-SAMPLE RESULTS — HIP-3 IV Arbitrage + Greeks Strategies')
-    print('='*140)
+    print('\n'+'='*160)
+    print('  OUT-OF-SAMPLE RESULTS — Purged K-Fold CV | Hansen SPA | IV Arb + Greeks')
+    print('='*160)
 
     def fmt_p(p):
         if p < 0.001: return '<.001*'
         if p < 0.05: return f'{p:.3f}*'
         return f'{p:.3f} '
 
-    print(f'\n{"Asset":<8} {"Alpha":>7} {"Sharpe":>7} {"S.Bn":>6} '
-          f'{"Calmar":>7} {"MaxDD":>6} {"DD.Bn":>6} '
-          f'{"IVarb":>6} {"Fil/d":>5} '
-          f'{"BestGreek":<16} {"GkSR":>5} '
-          f'{"t-stat":>7} {"p(t)":>7} {"p(SR)":>7} {"p(Bt)":>7} {"p(Pm)":>7}')
-    print('-'*150)
+    print(f'\n{"Asset":<8} {"Alpha":>7} {"Sharpe":>7} {"SR±":>6} {"Folds":>5} '
+          f'{"OOS%":>5} {"Calmar":>7} {"MaxDD":>6} '
+          f'{"t-stat":>7} {"p(t)":>7} {"p(SR)":>7} {"p(SPA)":>7} '
+          f'{"p(Bt)":>7} {"p(Pm)":>7} {"DSR":>6}')
+    print('-'*160)
 
     pa = 0
     for _, r in df_res.sort_values('alpha', ascending=False).iterrows():
         if r['alpha'] > 0: pa += 1
         print(f'{r["asset"]:<8} {r["alpha"]*100:>+6.1f}% {r["sharpe"]:>7.2f} '
-              f'{r["sharpe_bench"]:>6.2f} '
-              f'{r["calmar"]:>7.2f} {r["max_dd"]*100:>5.1f}% {r["max_dd_bench"]*100:>5.1f}% '
-              f'{r["iv_arb_ann"]*100:>5.1f}% {r["fills_per_day"]:>5.0f} '
-              f'{r["best_greek_strategy"]:<16} {r["best_greek_sharpe"]:>5.2f} '
+              f'{r["sharpe_std"]:>5.2f}  {r["n_folds"]:>5.0f} '
+              f'{r["oos_pct"]*100:>4.0f}% '
+              f'{r["calmar"]:>7.2f} {r["max_dd"]*100:>5.1f}% '
               f'{r["t_stat"]:>7.2f} {fmt_p(r["t_pval"]):>7} '
-              f'{fmt_p(r["sr_pval"]):>7} {fmt_p(r["boot_pval"]):>7} '
-              f'{fmt_p(r["perm_pval"]):>7}')
+              f'{fmt_p(r["sr_pval"]):>7} {fmt_p(r["spa_pval"]):>7} '
+              f'{fmt_p(r["boot_pval"]):>7} {fmt_p(r["perm_pval"]):>7} '
+              f'{r["dsr"]:>6.3f}')
 
     print(f'\n── Summary ──')
+    print(f'  Methodology:       Purged K-Fold CV (purge={PURGE_BARS}, embargo={EMBARGO_BARS})')
     print(f'  Positive alpha:    {pa}/{len(df_res)}')
     print(f'  Mean alpha:        {df_res["alpha"].mean()*100:+.1f}%')
-    print(f'  Mean Sharpe:       {df_res["sharpe"].mean():.2f}  (bench: {df_res["sharpe_bench"].mean():.2f})')
+    print(f'  Mean Sharpe:       {df_res["sharpe"].mean():.2f} ± {df_res["sharpe_std"].mean():.2f}  '
+          f'(bench: {df_res["sharpe_bench"].mean():.2f})')
     print(f'  Mean Calmar:       {df_res["calmar"].mean():.2f}')
-    print(f'  Mean MaxDD:        {df_res["max_dd"].mean()*100:.1f}%  (bench: {df_res["max_dd_bench"].mean()*100:.1f}%)')
+    print(f'  Mean MaxDD:        {df_res["max_dd"].mean()*100:.1f}%  '
+          f'(bench: {df_res["max_dd_bench"].mean()*100:.1f}%)')
+    print(f'  Mean folds:        {df_res["n_folds"].mean():.1f}  '
+          f'OOS: {df_res["oos_pct"].mean()*100:.0f}%')
     print(f'  Mean IV arb/yr:    {df_res["iv_arb_ann"].mean()*100:.1f}%')
     print(f'  Mean fills/day:    {df_res["fills_per_day"].mean():.0f}')
+    spa_pass = (df_res['spa_sig'] == True).sum()
+    print(f'  SPA significant:   {spa_pass}/{len(df_res)}')
     print(f'  Time: {time.time()-t0:.1f}s | CSV: {csv}')
 
     return df_res, curves, greeks_results_all
