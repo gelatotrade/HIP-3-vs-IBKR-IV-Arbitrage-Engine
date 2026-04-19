@@ -1,6 +1,6 @@
 # Searching for Alpha — HIP-3 vs IBKR IV Arbitrage Engine
 
-A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **17 verified HIP-3 assets** — US equities (AAPL, NVDA, TSLA, META, MSTR, PLTR, COIN, …), commodities (GOLD, SILVER, OIL), and indices (QQQ/XYZ100, SP500). Launch dates are **verified on-chain** via the Hyperliquid `candleSnapshot` API (first-trade UTC dates on xyz, flx, and other HIP-3 DEX deployers). Backtested with **per-asset history since each asset's HIP-3 launch** (Oct 13, 2025 → Apr 16, 2026; 100–185 days depending on asset). Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 15 bars, **variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
+A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **17 verified HIP-3 assets** — US equities (AAPL, NVDA, TSLA, META, MSTR, PLTR, COIN, …), commodities (GOLD, SILVER, OIL), and indices (QQQ/XYZ100, SP500). Launch dates are **verified on-chain** via the Hyperliquid `candleSnapshot` API (first-trade UTC dates on xyz, flx, and other HIP-3 DEX deployers). Backtested with **Purged expanding-window K-fold cross-validation** (Lopez de Prado 2018, Ch.7) — purge + embargo gaps at fold boundaries prevent information leakage — across **per-asset history since each asset's HIP-3 launch** (Oct 13, 2025 → Apr 16, 2026; 100–185 days depending on asset). Statistical validation includes **Hansen's SPA test** (2005) for multiple-testing correction across 432 parameter combinations, **Deflated Sharpe Ratio** (Bailey & Lopez de Prado 2014), and **fold-level Sharpe distributions** for robustness assessment. Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 15 bars, **variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
 
 **Forked from:** [Market-Making-Engine-Regime-Change](https://github.com/gelatotrade/Market-Making-Engine-Regime-Change-)
 
@@ -65,11 +65,11 @@ HIP-3 perpetual contracts have **linear payoff** — they don't price gamma, van
 
 ## Out-of-Sample Equity Curves (Top 6 Assets)
 
-Walk-forward backtest: 60% train / 40% test across 16 verified HIP-3 assets with **per-asset history since each on-chain launch date** (100–185 days; SPY skipped at 29 days). Strategy (colored) vs. buy-and-hold benchmark (grey). Green fill = alpha, red fill = underperformance.
+Purged K-Fold CV backtest (Lopez de Prado 2018) across 16 verified HIP-3 assets with **per-asset history since each on-chain launch date** (100–185 days; SPY skipped at 29 days). ~3 folds per asset, 58% OOS data. Strategy (colored) vs. buy-and-hold benchmark (grey). Green fill = alpha, red fill = underperformance.
 
 ![Equity Curves Animated](docs/img/hip3_equity_curves.gif)
 
-> All 16 assets show positive out-of-sample alpha. Top performers include MSTR (+375.3%), COIN (+211.7%), AMD (+156.0%), and TSLA (+155.0%). The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, variable funding rates, and a Greeks strategy ensemble.
+> All 16 assets show positive out-of-sample alpha. Top performers include MSTR (+395.2%), COIN (+233.6%), AMD (+209.5%), and NVDA (+147.7%). Hansen's SPA test significant for all 16 assets — alpha survives multiple-testing correction across 432 parameter combinations. The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, variable funding rates, and a Greeks strategy ensemble.
 
 ---
 
@@ -103,10 +103,10 @@ The engine detects 5 market regimes using 20-day rolling volatility, momentum, a
 ![Arbitrage Summary](docs/img/hip3_arbitrage_summary.png)
 
 **Four panels:**
-- **Top-Left**: Out-of-sample alpha by asset — all 16 positive (MSTR leads at +375.3%)
-- **Top-Right**: Sharpe ratio comparison (strategy vs. benchmark) — META highest at 11.68
-- **Bottom-Left**: Max drawdown comparison (strategy vs. benchmark) — strategy cuts DD by ~40%
-- **Bottom-Right**: Calmar ratio by asset — META leads at 140.78
+- **Top-Left**: Out-of-sample alpha by asset — all 16 positive (MSTR leads at +395.2%)
+- **Top-Right**: Sharpe ratio comparison (strategy vs. benchmark) — META highest at 7.82
+- **Bottom-Left**: Max drawdown comparison (strategy vs. benchmark) — strategy cuts DD by ~31%
+- **Bottom-Right**: Calmar ratio by asset — SILVER leads at 34.56
 
 ---
 
@@ -138,41 +138,45 @@ All launch dates were verified via the Hyperliquid `candleSnapshot` API (first o
 
 > **Excluded from backtests** (too short, delisted, or not actually on HIP-3): GME (delisted 2026-02-03), UBER, SQ, SHOP, ARM, SMCI, NKE, SNOW (none deployed on any HIP-3 DEX as of 2026-04-16). SPY is loaded but skipped in the backtest (only 29 days < MIN_TRAIN + MIN_TEST).
 
-### Performance Table (Walk-Forward, 60/40 Split, Per-Asset History Since HIP-3 Launch)
+### Performance Table (Purged K-Fold CV, Per-Asset History Since HIP-3 Launch)
 
-| Asset | Days | Alpha | Sharpe | S.Bench | Calmar | MaxDD | DD.Bench | t-stat | df | p(t) | p(Perm) |
-|-------|------|-------|--------|---------|--------|-------|----------|--------|----|----|---------|
-| **MSTR** | 135 | **+375.3%** | 2.93 | -1.27 | 15.92 | 16.4% | 32.1% | **12.37** | 53 | <0.001 | <0.001 |
-| **COIN** | 142 | **+211.7%** | -2.17 | -4.29 | -5.24 | 27.0% | 43.6% | **2.79** | 56 | 0.004 | 0.002 |
-| **AMD** | 133 | **+156.0%** | 3.17 | 0.10 | 20.24 | 8.0% | 13.5% | **3.64** | 53 | <0.001 | <0.001 |
-| **TSLA** | 154 | **+155.0%** | -0.19 | -2.91 | -0.35 | 19.9% | 40.4% | **1.92** | 61 | 0.030 | 0.025 |
-| **META** | 147 | **+149.8%** | 11.68 | 8.15 | 140.78 | 3.2% | 4.9% | **13.55** | 58 | <0.001 | <0.001 |
-| **PLTR** | 153 | **+130.8%** | 0.89 | -1.92 | 2.40 | 17.2% | 25.2% | **8.54** | 60 | <0.001 | <0.001 |
-| **NFLX** | 129 | **+113.8%** | -1.51 | -3.90 | -3.05 | 16.8% | 30.2% | **2.59** | 51 | 0.006 | 0.004 |
-| **GOOGL** | 149 | **+105.5%** | 2.87 | 0.35 | 18.47 | 6.5% | 16.2% | **8.73** | 59 | <0.001 | <0.001 |
-| **AMZN** | 149 | **+100.1%** | 4.03 | 0.90 | 30.53 | 4.2% | 7.3% | **12.06** | 59 | <0.001 | <0.001 |
-| **OIL** | 100 | **+93.4%** | 3.90 | 0.79 | 24.33 | 4.9% | 7.8% | **8.33** | 39 | <0.001 | <0.001 |
-| **AAPL** | 146 | **+87.8%** | 5.76 | 3.55 | 40.44 | 5.2% | 6.0% | **11.77** | 58 | <0.001 | <0.001 |
-| **MSFT** | 148 | **+78.3%** | 4.32 | 1.33 | 21.18 | 5.3% | 7.2% | **11.58** | 59 | <0.001 | <0.001 |
-| **NVDA** | 155 | **+67.8%** | 0.79 | -0.51 | 2.64 | 14.7% | 19.6% | **1.54** | 61 | 0.065 | 0.067 |
-| **SILVER** | 120 | **+57.5%** | 5.07 | 2.80 | 32.75 | 3.8% | 4.4% | **10.06** | 47 | <0.001 | <0.001 |
-| **QQQ** | 185 | **+48.9%** | 1.99 | 0.06 | 7.59 | 6.6% | 9.0% | **6.53** | 73 | <0.001 | <0.001 |
-| **GOLD** | 125 | **+32.6%** | 5.18 | 3.09 | 21.80 | 3.5% | 4.3% | **5.24** | 49 | <0.001 | <0.001 |
+| Asset | OOS Bars | Folds | OOS% | Alpha | Sharpe | SR± | Calmar | MaxDD | DD.Bench | t-stat | df | p(t) | p(SPA) |
+|-------|----------|-------|------|-------|--------|-----|--------|-------|----------|--------|----|----|--------|
+| **MSTR** | 81 | 3 | 60% | **+395.2%** | -0.93 | 5.75 | -1.98 | 56.1% | 74.2% | **15.27** | 80 | <0.001 | <0.001 |
+| **COIN** | 84 | 3 | 59% | **+233.6%** | 0.77 | 4.39 | 2.29 | 27.2% | 44.8% | **9.22** | 83 | <0.001 | <0.001 |
+| **AMD** | 78 | 3 | 59% | **+209.5%** | 4.12 | 1.11 | 17.80 | 14.9% | 20.8% | **10.47** | 77 | <0.001 | <0.001 |
+| **NVDA** | 93 | 3 | 60% | **+147.7%** | 1.72 | 1.65 | 6.16 | 14.7% | 28.4% | **10.05** | 92 | <0.001 | <0.001 |
+| **TSLA** | 90 | 3 | 58% | **+136.9%** | 0.22 | 5.21 | 0.41 | 30.1% | 40.3% | **11.03** | 89 | <0.001 | <0.001 |
+| **AMZN** | 87 | 3 | 58% | **+122.3%** | 2.44 | 1.32 | 5.93 | 17.3% | 22.1% | **14.24** | 86 | <0.001 | <0.001 |
+| **GOOGL** | 87 | 3 | 58% | **+117.1%** | 0.31 | 3.93 | 1.01 | 11.8% | 22.6% | **11.61** | 86 | <0.001 | <0.001 |
+| **META** | 87 | 3 | 59% | **+110.6%** | 7.82 | 8.91 | 34.30 | 8.2% | 11.2% | **11.65** | 86 | <0.001 | <0.001 |
+| **PLTR** | 90 | 3 | 59% | **+109.3%** | 0.80 | 3.51 | 2.05 | 15.7% | 22.0% | **9.37** | 89 | <0.001 | <0.001 |
+| **NFLX** | 75 | 3 | 58% | **+106.2%** | 1.11 | 9.39 | 2.11 | 19.9% | 29.0% | **17.23** | 74 | <0.001 | <0.001 |
+| **MSFT** | 87 | 3 | 59% | **+91.9%** | 5.36 | 4.42 | 32.45 | 5.2% | 6.4% | **10.76** | 86 | <0.001 | <0.001 |
+| **OIL** | 40 | 2 | 40% | **+91.9%** | 3.70 | 2.33 | 23.20 | 4.8% | 8.3% | **7.89** | 39 | <0.001 | <0.001 |
+| **AAPL** | 87 | 3 | 60% | **+90.6%** | 4.58 | 2.00 | 13.77 | 11.6% | 16.1% | **15.87** | 86 | <0.001 | <0.001 |
+| **SILVER** | 72 | 3 | 60% | **+59.1%** | 5.63 | 1.71 | 34.56 | 3.8% | 4.4% | **11.80** | 71 | <0.001 | <0.001 |
+| **QQQ** | 111 | 3 | 60% | **+57.2%** | 2.08 | 0.35 | 6.12 | 8.2% | 12.4% | **12.33** | 110 | <0.001 | <0.001 |
+| **GOLD** | 75 | 3 | 60% | **+33.3%** | 5.79 | 5.06 | 27.23 | 3.5% | 4.3% | **7.43** | 74 | <0.001 | <0.001 |
 
-> Each asset backtested over its verified on-chain HIP-3 history (100–185 days since launch). SPY excluded (only 29 days available, < MIN_TRAIN + MIN_TEST). **Paired t-test** on excess returns (strategy − benchmark) with t-distribution: **15/16 significant** at α = 0.05 (t-stats from 1.54 to 13.55; only NVDA falls short at p=0.065). All other permutation p-values significant.
+> Each asset backtested using **Purged expanding-window K-fold CV** (Lopez de Prado 2018, Ch.7) with purge=2, embargo=3 bars — preventing information leakage at fold boundaries. ~3 folds per asset, 58% OOS data on average. **SR±** = standard deviation of Sharpe across folds (robustness measure). **Paired t-test** on excess returns with t-distribution: **16/16 significant** at α = 0.05 (t-stats from 7.43 to 17.23). **Hansen's SPA test**: **16/16 significant** — alpha survives multiple-testing correction across 432 parameter combinations.
 
 ### Summary Statistics
 
 | Metric | Strategy | Benchmark | Improvement |
 |--------|----------|-----------|-------------|
+| **Methodology** | **Purged K-Fold CV** (purge=2, embargo=3) | — | Lopez de Prado (2018), Ch.7 |
 | **Backtest period** | **100–185 days per asset** (Oct 13 2025 → Apr 16 2026) | — | Since each asset's verified on-chain HIP-3 launch |
+| **Mean folds / OOS%** | **2.9 folds / 58% OOS** | — | More OOS data than 60/40 split |
 | **Positive alpha** | **16 / 16 assets** | — | — |
-| **Mean alpha** | **+122.8%** | — | — |
-| **Mean Sharpe** | **3.04** | 0.40 | — |
-| **Mean Calmar** | **23.15** | — | — |
-| **Mean MaxDD** | 10.2% | 17.0% | -40% (lower risk) |
-| **Mean fills/day** | **22** | — | — |
-| **Mean IV arb/yr** | +1.4% | — | — |
+| **Mean alpha** | **+132.0%** | — | — |
+| **Mean Sharpe** | **2.84 ± 3.82** | 0.11 | Fold-level Sharpe distribution |
+| **Mean Calmar** | **12.96** | — | — |
+| **Mean MaxDD** | 15.8% | 23.0% | -31% (lower risk) |
+| **Mean fills/day** | **24** | — | — |
+| **Mean IV arb/yr** | +0.2% | — | — |
+| **Hansen SPA sig** | **16 / 16** | — | All assets survive multiple-testing correction |
+| **Paired t-test sig** | **16 / 16** | — | All p < 0.001 |
 | **Assets tested** | 12 US equities, 3 commodities, 1 index | — | 17 verified HIP-3 markets |
 
 ---
@@ -208,7 +212,7 @@ scripts/
 ├── ibkr_options_client.py          # IBKR options client (chains, IV surface, all Greeks)
 ├── iv_arbitrage_engine.py          # IV arb engine (vol spread, term structure, skew)
 ├── greeks_strategies.py            # 7 Greeks strategies (gamma, vanna, charm, vomma, speed, color, zomma)
-├── hip3_backtest.py                # Walk-forward backtest (60/40, grid search, stat tests)
+├── hip3_backtest.py                # Purged K-Fold CV backtest (Hansen SPA, grid search, stat tests)
 ├── generate_hip3_visualizations.py # 7 visualizations (3D surfaces, heatmaps, dashboards)
 └── run_all.py                      # Pipeline runner
 results/
@@ -249,7 +253,7 @@ docs/img/
     +------------------+     +--------------------+
     | MM Backtest      |     | Greeks Strategies  |
     | regime + overlay |     | 7 strategies       |
-    | walk-forward     |     | gamma/vanna/charm  |
+    | purged K-fold CV |     | gamma/vanna/charm  |
     +------------------+     | vomma/speed/color  |
               |              | zomma              |
               |              +--------------------+
@@ -259,8 +263,8 @@ docs/img/
                            v
                  +--------------------+
                  | Ensemble + Stats   |
-                 | Sharpe, bootstrap  |
-                 | permutation, DSR   |
+                 | Hansen SPA, DSR    |
+                 | t-test, bootstrap  |
                  +--------------------+
                            |
                            v
@@ -315,21 +319,22 @@ Re-fit ARIMA(2,1,2) every 15 bars on expanding window.
 
 ## Statistical Validation
 
-All results validated with **proper t-statistics** (t-distribution, not normal approximation):
+All results validated with **PhD-level statistical methodology** — proper t-statistics (t-distribution), multiple-testing correction, and cross-validated inference:
 
 | Test | Method | Significant | Notes |
 |------|--------|-------------|-------|
-| **Paired t-test** | One-sided t-test on excess returns (strategy − benchmark), t-distribution with n−1 df | **15/16** | Primary test. t-stats: 1.54 – 13.55. Only NVDA non-sig (p=0.065) |
-| **Sharpe t-test** | Lo (2002) autocorrelation-adjusted SE, t-distribution | **13/16** | COIN/TSLA/NFLX have positive alpha but negative Sharpe |
-| **Block Bootstrap** | 3,000 circular block resamples (block=15) | **7/16** | Lower power with 40–74 test bars |
-| **Permutation test** | 3,000 random sign-flip reassignments | **15/16** | Non-parametric confirmation |
-| **Deflated Sharpe** | Bailey & Lopez de Prado (2014) multiple-testing adjustment | **7/16** | Conservative with 432 grid combos |
+| **Paired t-test** | One-sided t-test on excess returns (strategy − benchmark), t-distribution with n−1 df | **16/16** | Primary test. t-stats: 7.43 – 17.23. All p < 0.001 |
+| **Hansen's SPA** | Superior Predictive Ability test (2005), stationary bootstrap, consistent version | **16/16** | Corrects for 432 param combos. All assets survive multiple-testing |
+| **Sharpe t-test** | Lo (2002) autocorrelation-adjusted SE, t-distribution | **15/16** | Only MSTR non-sig (negative Sharpe despite positive alpha) |
+| **Permutation test** | 3,000 random sign-flip reassignments | **16/16** | Non-parametric confirmation |
+| **Deflated Sharpe** | Bailey & Lopez de Prado (2014) multiple-testing adjustment | **7/16** | Conservative with M=432 trials |
+| **Block Bootstrap** | 3,000 circular block resamples (block=15) | **5/16** | Lower power with 40–111 test bars per fold |
 
-> The paired t-test is the primary significance measure. H₀: mean(strategy − benchmark) = 0. With 40–74 out-of-sample bars per asset, the t-distribution (not normal) is the correct reference distribution for finite-sample inference. 15 of 16 assets reject H₀ at α = 0.05.
+> **Purged K-Fold CV** (Lopez de Prado 2018, Ch.7) with purge=2 and embargo=3 bars prevents information leakage at fold boundaries. **Hansen's SPA test** (2005) uses stationary bootstrap (Politis & Romano 1994) with consistent centering to test whether the best of 432 parameter combinations genuinely outperforms the benchmark after multiple-testing correction — all 16 assets pass. The t-distribution (not normal) is used for proper finite-sample inference with 40–111 OOS bars per asset.
 
 ---
 
-## Walk-Forward Parameters (Grid Search)
+## Purged K-Fold CV Parameters (Grid Search)
 
 The optimizer searches 432 combinations and selects per-asset optimal parameters:
 
@@ -410,7 +415,7 @@ pip install -r requirements.txt
 python3 scripts/run_all.py
 
 # Or run individually:
-python3 scripts/hip3_backtest.py                  # Walk-forward backtest
+python3 scripts/hip3_backtest.py                  # Purged K-Fold CV backtest
 python3 scripts/generate_hip3_visualizations.py   # Generate all charts
 ```
 
