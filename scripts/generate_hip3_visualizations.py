@@ -18,7 +18,7 @@ from PIL import Image
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from hyperliquid_hip3_client import generate_synthetic_hip3_data
+from hyperliquid_hip3_client import generate_synthetic_hip3_data, load_real_hip3_data
 from hip3_rolling_backtest import rolling_backtest_asset, generate_funding_history
 from iv_arbitrage_engine import IVArbitrageEngine
 from ibkr_options_client import bs_greeks
@@ -286,7 +286,13 @@ def gen_summary(csv_path):
 def main():
     print('='*70); print('  HIP-3 Visualization Generator (Equities/Commodities/ETFs)'); print('='*70)
     OUT_DIR.mkdir(parents=True,exist_ok=True)
-    print('\nGenerating data (per-asset history since HIP-3 launch)...'); data=generate_synthetic_hip3_data(n_assets=25,min_days=100)
+    # Use real Hyperliquid HIP-3 candles + funding when cached; else synthetic.
+    data = load_real_hip3_data(min_days=100)
+    if data:
+        print(f'\nLoaded REAL HIP-3 data for {len(data)} assets from Hyperliquid API cache.')
+    else:
+        print('\nGenerating synthetic HIP-3 data (cache missing) ...')
+        data = generate_synthetic_hip3_data(n_assets=25, min_days=100)
     arb=IVArbitrageEngine(); all_bt={}; curves={}
     for tk,df in data.items():
         c,o,h,l=df['close'].values,df['open'].values,df['high'].values,df['low'].values

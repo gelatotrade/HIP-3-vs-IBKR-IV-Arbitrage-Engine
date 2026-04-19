@@ -79,10 +79,13 @@ class IVArbitrageEngine:
             rv_20d = np.std(returns[i-20:i], ddof=1) * np.sqrt(365)
 
             # Component 2: Funding rate premium
+            # Hyperliquid funding is settled hourly. The synthetic generator
+            # produces aggregated DAILY funding rates (sum of 24 hourly settlements);
+            # annualize via 365 (already daily). Live API returns hourly rates,
+            # caller must aggregate before passing in.
             funding_premium = 0.0
             if funding_rates is not None and i < len(funding_rates):
-                # Annualized funding → vol premium
-                ann_funding = abs(funding_rates[i]) * 3 * 365
+                ann_funding = abs(funding_rates[i]) * 365
                 funding_premium = np.sqrt(max(ann_funding, 0)) * 0.5
 
             # Component 3: Spread-implied vol

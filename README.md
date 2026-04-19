@@ -1,6 +1,6 @@
 # Searching for Alpha — HIP-3 vs IBKR IV Arbitrage Engine
 
-A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **17 verified HIP-3 assets** — US equities (AAPL, NVDA, TSLA, META, MSTR, PLTR, COIN, …), commodities (GOLD, SILVER, OIL), and indices (QQQ/XYZ100, SP500). Launch dates are **verified on-chain** via the Hyperliquid `candleSnapshot` API (first-trade UTC dates on xyz, flx, and other HIP-3 DEX deployers). Backtested with **Purged expanding-window K-fold cross-validation** (Lopez de Prado 2018, Ch.7) — purge + embargo gaps at fold boundaries prevent information leakage — across **per-asset history since each asset's HIP-3 launch** (Oct 13, 2025 → Apr 16, 2026; 100–185 days depending on asset). Statistical validation includes **Hansen's SPA test** (2005) for multiple-testing correction across 432 parameter combinations, **Deflated Sharpe Ratio** (Bailey & Lopez de Prado 2014), and **fold-level Sharpe distributions** for robustness assessment. Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 15 bars, **variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
+A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **17 verified HIP-3 assets** — US equities (AAPL, NVDA, TSLA, META, MSTR, PLTR, COIN, …), commodities (GOLD, SILVER, OIL), and indices (QQQ/XYZ100, SP500). All data is **real, live-fetched from the Hyperliquid API**: on-chain verified launch dates (via `candleSnapshot`), full OHLCV history per asset from launch, and variable hourly funding-rate history from `fundingHistory`. Backtested with **Purged expanding-window K-fold cross-validation** (Lopez de Prado 2018, Ch.7) — purge + embargo gaps at fold boundaries prevent information leakage — across **per-asset history since each asset's HIP-3 launch** (Oct 13, 2025 → Apr 16, 2026; 100–185 days depending on asset). Statistical validation includes **Hansen's SPA test** (2005) for multiple-testing correction across 432 parameter combinations, **Deflated Sharpe Ratio** (Bailey & Lopez de Prado 2014), and **fold-level Sharpe distributions** for robustness assessment. Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 15 bars, **real variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
 
 **Forked from:** [Market-Making-Engine-Regime-Change](https://github.com/gelatotrade/Market-Making-Engine-Regime-Change-)
 
@@ -69,7 +69,7 @@ Purged K-Fold CV backtest (Lopez de Prado 2018) across 16 verified HIP-3 assets 
 
 ![Equity Curves Animated](docs/img/hip3_equity_curves.gif)
 
-> All 16 assets show positive out-of-sample alpha. Top performers include MSTR (+395.2%), COIN (+233.6%), AMD (+209.5%), and NVDA (+147.7%). Hansen's SPA test significant for all 16 assets — alpha survives multiple-testing correction across 432 parameter combinations. The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, variable funding rates, and a Greeks strategy ensemble.
+> All 16 assets show positive out-of-sample alpha on **real Hyperliquid HIP-3 data** (live candles + funding via API) after deducting variable hourly funding costs. Top performers include OIL (+388.9%), MSTR (+236.3%), COIN (+221.2%), and SILVER (+208.0%). The strategy generates alpha even on assets that declined in absolute terms (MSFT, PLTR, COIN benchmark Sharpe was negative). Hansen's SPA test significant for 16/16 assets — alpha survives multiple-testing correction across 432 parameter combinations. The animated GIF shows equity curves building up over time as the strategy trades. Combines ARIMA-driven regime-adaptive market-making, IV arbitrage, real variable funding rates, and a Greeks strategy ensemble.
 
 ---
 
@@ -103,10 +103,10 @@ The engine detects 5 market regimes using 20-day rolling volatility, momentum, a
 ![Arbitrage Summary](docs/img/hip3_arbitrage_summary.png)
 
 **Four panels:**
-- **Top-Left**: Out-of-sample alpha by asset — all 16 positive (MSTR leads at +395.2%)
-- **Top-Right**: Sharpe ratio comparison (strategy vs. benchmark) — META highest at 7.82
-- **Bottom-Left**: Max drawdown comparison (strategy vs. benchmark) — strategy cuts DD by ~31%
-- **Bottom-Right**: Calmar ratio by asset — SILVER leads at 34.56
+- **Top-Left**: Out-of-sample alpha by asset — all 16 positive (OIL leads at +388.9%)
+- **Top-Right**: Sharpe ratio comparison (strategy vs. benchmark) — NFLX highest at 3.79, GOOGL 3.44
+- **Bottom-Left**: Max drawdown comparison (strategy vs. benchmark) — strategy cuts DD by ~32%
+- **Bottom-Right**: Calmar ratio by asset — NFLX leads at 21.48, OIL 14.16, AAPL 13.44
 
 ---
 
@@ -138,43 +138,47 @@ All launch dates were verified via the Hyperliquid `candleSnapshot` API (first o
 
 > **Excluded from backtests** (too short, delisted, or not actually on HIP-3): GME (delisted 2026-02-03), UBER, SQ, SHOP, ARM, SMCI, NKE, SNOW (none deployed on any HIP-3 DEX as of 2026-04-16). SPY is loaded but skipped in the backtest (only 29 days < MIN_TRAIN + MIN_TEST).
 
-### Performance Table (Purged K-Fold CV, Per-Asset History Since HIP-3 Launch)
+### Performance Table (Real HIP-3 Data, Purged K-Fold CV, Variable Hourly Funding)
+
+Data source: real Hyperliquid API candles + funding history, per asset from on-chain HIP-3 launch through 2026-04-16.
 
 | Asset | OOS Bars | Folds | OOS% | Alpha | Sharpe | SR± | Calmar | MaxDD | DD.Bench | t-stat | df | p(t) | p(SPA) |
 |-------|----------|-------|------|-------|--------|-----|--------|-------|----------|--------|----|----|--------|
-| **MSTR** | 81 | 3 | 60% | **+395.2%** | -0.93 | 5.75 | -1.98 | 56.1% | 74.2% | **15.27** | 80 | <0.001 | <0.001 |
-| **COIN** | 84 | 3 | 59% | **+233.6%** | 0.77 | 4.39 | 2.29 | 27.2% | 44.8% | **9.22** | 83 | <0.001 | <0.001 |
-| **AMD** | 78 | 3 | 59% | **+209.5%** | 4.12 | 1.11 | 17.80 | 14.9% | 20.8% | **10.47** | 77 | <0.001 | <0.001 |
-| **NVDA** | 93 | 3 | 60% | **+147.7%** | 1.72 | 1.65 | 6.16 | 14.7% | 28.4% | **10.05** | 92 | <0.001 | <0.001 |
-| **TSLA** | 90 | 3 | 58% | **+136.9%** | 0.22 | 5.21 | 0.41 | 30.1% | 40.3% | **11.03** | 89 | <0.001 | <0.001 |
-| **AMZN** | 87 | 3 | 58% | **+122.3%** | 2.44 | 1.32 | 5.93 | 17.3% | 22.1% | **14.24** | 86 | <0.001 | <0.001 |
-| **GOOGL** | 87 | 3 | 58% | **+117.1%** | 0.31 | 3.93 | 1.01 | 11.8% | 22.6% | **11.61** | 86 | <0.001 | <0.001 |
-| **META** | 87 | 3 | 59% | **+110.6%** | 7.82 | 8.91 | 34.30 | 8.2% | 11.2% | **11.65** | 86 | <0.001 | <0.001 |
-| **PLTR** | 90 | 3 | 59% | **+109.3%** | 0.80 | 3.51 | 2.05 | 15.7% | 22.0% | **9.37** | 89 | <0.001 | <0.001 |
-| **NFLX** | 75 | 3 | 58% | **+106.2%** | 1.11 | 9.39 | 2.11 | 19.9% | 29.0% | **17.23** | 74 | <0.001 | <0.001 |
-| **MSFT** | 87 | 3 | 59% | **+91.9%** | 5.36 | 4.42 | 32.45 | 5.2% | 6.4% | **10.76** | 86 | <0.001 | <0.001 |
-| **OIL** | 40 | 2 | 40% | **+91.9%** | 3.70 | 2.33 | 23.20 | 4.8% | 8.3% | **7.89** | 39 | <0.001 | <0.001 |
-| **AAPL** | 87 | 3 | 60% | **+90.6%** | 4.58 | 2.00 | 13.77 | 11.6% | 16.1% | **15.87** | 86 | <0.001 | <0.001 |
-| **SILVER** | 72 | 3 | 60% | **+59.1%** | 5.63 | 1.71 | 34.56 | 3.8% | 4.4% | **11.80** | 71 | <0.001 | <0.001 |
-| **QQQ** | 111 | 3 | 60% | **+57.2%** | 2.08 | 0.35 | 6.12 | 8.2% | 12.4% | **12.33** | 110 | <0.001 | <0.001 |
-| **GOLD** | 75 | 3 | 60% | **+33.3%** | 5.79 | 5.06 | 27.23 | 3.5% | 4.3% | **7.43** | 74 | <0.001 | <0.001 |
+| **OIL** | 40 | 2 | 40% | **+388.9%** | 2.28 | 0.96 | 14.16 | 17.7% | 24.6% | **7.67** | 39 | <0.001 | <0.001 |
+| **MSTR** | 81 | 3 | 60% | **+236.3%** | 1.93 | 2.57 | 6.21 | 31.0% | 35.0% | **13.82** | 80 | <0.001 | <0.001 |
+| **COIN** | 84 | 3 | 59% | **+221.2%** | 1.15 | 4.08 | 3.39 | 30.0% | 37.0% | **15.09** | 83 | <0.001 | <0.001 |
+| **SILVER** | 44 | 2 | 39% | **+208.0%** | 1.14 | 5.13 | 3.94 | 17.4% | 27.6% | **8.60** | 43 | <0.001 | <0.001 |
+| **AMD** | 78 | 3 | 58% | **+173.7%** | 2.06 | 5.17 | 6.10 | 23.5% | 26.7% | **11.68** | 77 | <0.001 | <0.001 |
+| **PLTR** | 90 | 3 | 58% | **+172.6%** | 0.87 | 6.12 | 2.70 | 20.4% | 29.8% | **12.80** | 89 | <0.001 | <0.001 |
+| **TSLA** | 93 | 3 | 60% | **+114.7%** | 1.47 | 0.48 | 7.19 | 8.7% | 24.9% | **15.94** | 92 | <0.001 | <0.001 |
+| **NFLX** | 78 | 3 | 60% | **+112.7%** | 3.79 | 3.86 | 21.48 | 8.0% | 9.6% | **10.34** | 77 | <0.001 | <0.001 |
+| **META** | 87 | 3 | 59% | **+107.4%** | 2.69 | 0.88 | 6.53 | 17.8% | 29.5% | **13.39** | 86 | <0.001 | <0.001 |
+| **NVDA** | 93 | 3 | 60% | **+103.5%** | 3.40 | 1.60 | 14.36 | 9.5% | 17.3% | **13.23** | 92 | <0.001 | <0.001 |
+| **AMZN** | 90 | 3 | 60% | **+95.3%** | 2.61 | 5.14 | 7.08 | 17.6% | 19.1% | **16.38** | 89 | <0.001 | <0.001 |
+| **GOOGL** | 90 | 3 | 60% | **+94.9%** | 3.44 | 2.13 | 11.74 | 9.4% | 20.6% | **11.17** | 89 | <0.001 | <0.001 |
+| **AAPL** | 87 | 3 | 59% | **+85.9%** | 3.33 | 0.83 | 13.44 | 6.7% | 12.4% | **15.56** | 86 | <0.001 | <0.001 |
+| **MSFT** | 87 | 3 | 58% | **+83.2%** | -0.45 | 1.73 | -0.84 | 15.7% | 26.5% | **12.36** | 86 | <0.001 | <0.001 |
+| **GOLD** | 69 | 3 | 59% | **+76.8%** | 1.37 | 6.90 | 3.08 | 13.8% | 20.1% | **10.23** | 68 | <0.001 | <0.001 |
+| **QQQ** | 111 | 3 | 60% | **+54.6%** | 2.64 | 2.28 | 9.71 | 6.1% | 13.1% | **10.53** | 110 | <0.001 | <0.001 |
 
-> Each asset backtested using **Purged expanding-window K-fold CV** (Lopez de Prado 2018, Ch.7) with purge=2, embargo=3 bars — preventing information leakage at fold boundaries. ~3 folds per asset, 58% OOS data on average. **SR±** = standard deviation of Sharpe across folds (robustness measure). **Paired t-test** on excess returns with t-distribution: **16/16 significant** at α = 0.05 (t-stats from 7.43 to 17.23). **Hansen's SPA test**: **16/16 significant** — alpha survives multiple-testing correction across 432 parameter combinations.
+> Real Hyperliquid HIP-3 OHLCV + hourly funding history, aggregated daily. **Purged expanding-window K-fold CV** (Lopez de Prado 2018, Ch.7) with purge=2, embargo=3 bars prevents information leakage. **Variable hourly funding** applied to base directional position AND IV-arb leg (Hyperliquid 24×/day settlement; xyz HIP-3 funding_multiplier = 0.5, real per-asset historical rates). **Paired t-test** on excess returns with t-distribution: **16/16 significant**, t-stats 7.67 – 16.38, all p < 0.001. **Hansen's SPA test**: **16/16 significant** — alpha survives multiple-testing correction across 432 parameter combinations.
 
 ### Summary Statistics
 
 | Metric | Strategy | Benchmark | Improvement |
 |--------|----------|-----------|-------------|
+| **Data source** | **Real Hyperliquid API** (candles + funding) | — | Fetched via `fetch_hip3_candles.py` + `fetch_hip3_funding.py` |
 | **Methodology** | **Purged K-Fold CV** (purge=2, embargo=3) | — | Lopez de Prado (2018), Ch.7 |
+| **Funding model** | **Real per-asset hourly** (Hyperliquid history, daily aggregate) | — | Applied to base + IV-arb legs |
 | **Backtest period** | **100–185 days per asset** (Oct 13 2025 → Apr 16 2026) | — | Since each asset's verified on-chain HIP-3 launch |
-| **Mean folds / OOS%** | **2.9 folds / 58% OOS** | — | More OOS data than 60/40 split |
+| **Mean folds / OOS%** | **2.9 folds / 57% OOS** | — | More OOS data than 60/40 split |
 | **Positive alpha** | **16 / 16 assets** | — | — |
-| **Mean alpha** | **+132.0%** | — | — |
-| **Mean Sharpe** | **2.84 ± 3.82** | 0.11 | Fold-level Sharpe distribution |
-| **Mean Calmar** | **12.96** | — | — |
-| **Mean MaxDD** | 15.8% | 23.0% | -31% (lower risk) |
-| **Mean fills/day** | **24** | — | — |
-| **Mean IV arb/yr** | +0.2% | — | — |
+| **Mean alpha** | **+145.6%** | — | On real HIP-3 market data |
+| **Mean Sharpe** | **2.11 ± 3.12** | -0.58 | Benchmark was negative — many HIP-3 assets declined in period |
+| **Mean Calmar** | **8.14** | — | — |
+| **Mean MaxDD** | 15.8% | 23.4% | -32% (lower risk) |
+| **Mean fills/day** | **33** | — | — |
+| **Mean IV arb/yr** | -9.2% | — | After real variable funding on IV-arb leg |
 | **Hansen SPA sig** | **16 / 16** | — | All assets survive multiple-testing correction |
 | **Paired t-test sig** | **16 / 16** | — | All p < 0.001 |
 | **Assets tested** | 12 US equities, 3 commodities, 1 index | — | 17 verified HIP-3 markets |
@@ -208,13 +212,18 @@ The engine exploits the fact that HIP-3 perps have **linear payoff** (no Greeks)
 
 ```
 scripts/
-├── hyperliquid_hip3_client.py      # HIP-3 API client (17 verified HIP-3 assets)
+├── hyperliquid_hip3_client.py      # HIP-3 API client + real-data loader (17 assets)
 ├── ibkr_options_client.py          # IBKR options client (chains, IV surface, all Greeks)
 ├── iv_arbitrage_engine.py          # IV arb engine (vol spread, term structure, skew)
 ├── greeks_strategies.py            # 7 Greeks strategies (gamma, vanna, charm, vomma, speed, color, zomma)
+├── fetch_hip3_candles.py           # Fetch real OHLCV candles from Hyperliquid API → data/candles/
+├── fetch_hip3_funding.py           # Fetch real hourly funding history → data/funding_rates/
 ├── hip3_backtest.py                # Purged K-Fold CV backtest (Hansen SPA, grid search, stat tests)
 ├── generate_hip3_visualizations.py # 7 visualizations (3D surfaces, heatmaps, dashboards)
 └── run_all.py                      # Pipeline runner
+data/
+├── candles/{asset}.csv             # Real daily OHLCV per HIP-3 asset (from launch date)
+└── funding_rates/{asset}_hourly.csv, {asset}_daily.csv  # Real funding history
 results/
 └── hip3_backtest_results.csv       # Full backtest results
 docs/img/
@@ -303,17 +312,20 @@ Re-fit ARIMA(2,1,2) every 15 bars on expanding window.
 **Key features:**
 - **ARIMA(2,1,2)**: Autoregressive return forecast, re-fitted every 15 bars on expanding window (min 60 bars)
 - **EWMA Volatility**: Exponentially weighted conditional vol (GARCH proxy, span=20) for regime detection
-- **Variable Funding Rates**: Not constant — funding rates are regime-dependent (positive in bull, negative in bear, spiking in crisis), modelling real Hyperliquid 8h funding settlement dynamics
+- **Variable Funding Rates (Hyperliquid hourly mechanism)**: Funding is settled **hourly** on Hyperliquid (24×/day, each hour pays 1/8 of the computed 8h rate). The rate has a 0.01% per 8h base interest plus a premium component capped at ±4% per hour. HIP-3 markets use a different premium calculation than majors, allowing wider funding swings. The backtest uses variable funding rates (not constant) — regime-dependent, momentum-correlated, with crisis periods showing extreme rates. Funding cost is applied to **both** the base directional position **and** the IV-arb leg
 - **No look-ahead bias**: All signals computed from data available at time t, forecast for t+1
 - **Expanding window**: Train set grows with each re-fit, capturing full history
 
-**Funding rate dynamics (realistic, variable):**
-- Base: correlated with 20d momentum (longs pay in uptrends, shorts pay in downtrends)
-- Vol component: high-vol environments → slightly positive funding
-- Noise: random per-settlement variation
-- Range: -0.5% to +0.5% per 8h settlement (3 settlements/day, calibrated for equity-class vol)
-- Regime-dependent: crisis periods show extreme funding rates
-- Asset-class variation: commodities (GOLD, OIL) show tighter funding; high-beta equities (NVDA, TSLA, COIN) show wider swings
+**Funding rate dynamics (Hyperliquid hourly mechanism, verified via [official docs](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/funding)):**
+- **Settlement**: hourly (24×/day), each hour pays computed_8h_rate / 8
+- **Formula**: F = avg_premium_index + clamp(0.01% − P, ±0.05%) per 8h block
+- **Base interest**: 0.01% per 8h (~3 bp/day baseline)
+- **Cap**: 4% per HOUR (very generous; rarely binds)
+- **HIP-3 specific**: HIP-3 markets use `premium = 0.5*(impact_bid + impact_ask)/oracle - 1`, allowing deployers to express wider funding behaviors than majors
+- **Premium driver**: longs pay in uptrends (perp > oracle), shorts pay in downtrends
+- **Asset-class scaling** (synthetic generator): index/ETF (0.5×), commodity (0.7×), mega-cap (1.0×), high-beta equity (1.8× — NVDA, TSLA, AMD, PLTR), crypto-proxy (2.5× — MSTR, COIN)
+- **Range**: ~±0.1%/day baseline, can spike to ±2%/day in stress regimes
+- **Backtest impact**: variable daily funding charged to both base directional position AND IV-arb leg (long pays positive, short receives)
 
 ---
 
@@ -323,14 +335,14 @@ All results validated with **PhD-level statistical methodology** — proper t-st
 
 | Test | Method | Significant | Notes |
 |------|--------|-------------|-------|
-| **Paired t-test** | One-sided t-test on excess returns (strategy − benchmark), t-distribution with n−1 df | **16/16** | Primary test. t-stats: 7.43 – 17.23. All p < 0.001 |
-| **Hansen's SPA** | Superior Predictive Ability test (2005), stationary bootstrap, consistent version | **16/16** | Corrects for 432 param combos. All assets survive multiple-testing |
-| **Sharpe t-test** | Lo (2002) autocorrelation-adjusted SE, t-distribution | **15/16** | Only MSTR non-sig (negative Sharpe despite positive alpha) |
+| **Paired t-test** | One-sided t-test on excess returns (strategy − benchmark), t-distribution with n−1 df | **16/16** | Primary test. t-stats: 7.67 – 16.38. All p < 0.001 |
+| **Hansen's SPA** | Superior Predictive Ability test (2005), stationary bootstrap, consistent version | **16/16** | All assets pass multiple-testing correction across 432 param combos |
+| **Sharpe t-test** | Lo (2002) autocorrelation-adjusted SE, t-distribution | **15/16** | Only MSFT negative (positive alpha but negative absolute Sharpe) |
 | **Permutation test** | 3,000 random sign-flip reassignments | **16/16** | Non-parametric confirmation |
-| **Deflated Sharpe** | Bailey & Lopez de Prado (2014) multiple-testing adjustment | **7/16** | Conservative with M=432 trials |
-| **Block Bootstrap** | 3,000 circular block resamples (block=15) | **5/16** | Lower power with 40–111 test bars per fold |
+| **Bootstrap (block)** | 3,000 circular block resamples (block=15) | **3/16** | Low power with 40–111 test bars under real market noise |
+| **Deflated Sharpe** | Bailey & Lopez de Prado (2014) multiple-testing adjustment | **6/16** | Conservative with M=432 trials on real data |
 
-> **Purged K-Fold CV** (Lopez de Prado 2018, Ch.7) with purge=2 and embargo=3 bars prevents information leakage at fold boundaries. **Hansen's SPA test** (2005) uses stationary bootstrap (Politis & Romano 1994) with consistent centering to test whether the best of 432 parameter combinations genuinely outperforms the benchmark after multiple-testing correction — all 16 assets pass. The t-distribution (not normal) is used for proper finite-sample inference with 40–111 OOS bars per asset.
+> All tests run on **real Hyperliquid HIP-3 data** (OHLCV + funding from live API). **Purged K-Fold CV** (Lopez de Prado 2018, Ch.7) with purge=2 and embargo=3 bars prevents information leakage at fold boundaries. **Hansen's SPA test** (2005) uses stationary bootstrap (Politis & Romano 1994) with consistent centering to test whether the best of 432 parameter combinations genuinely outperforms the benchmark after multiple-testing correction — all 16 assets pass. Results include **real variable funding costs** on both the base directional position and IV-arb leg (Hyperliquid hourly settlement, per-asset historical rates with xyz deployer's 0.5× funding multiplier).
 
 ---
 
@@ -411,13 +423,19 @@ strikes, expiries, iv_matrix = client.get_iv_surface(spot=195, base_iv=0.28)
 # Install dependencies
 pip install -r requirements.txt
 
-# Run full pipeline (backtest + visualizations)
+# Step 1: Fetch REAL data from Hyperliquid API (one-time; cached in data/)
+python3 scripts/fetch_hip3_candles.py             # Real OHLCV per HIP-3 asset
+python3 scripts/fetch_hip3_funding.py             # Real hourly funding history
+
+# Step 2: Run full pipeline on real data (backtest + visualizations)
 python3 scripts/run_all.py
 
 # Or run individually:
 python3 scripts/hip3_backtest.py                  # Purged K-Fold CV backtest
 python3 scripts/generate_hip3_visualizations.py   # Generate all charts
 ```
+
+> Data is cached in `data/candles/` and `data/funding_rates/`. Re-run the `fetch_*` scripts to refresh. The backtest auto-falls-back to a synthetic generator only if the cache is missing.
 
 ---
 
@@ -427,7 +445,7 @@ python3 scripts/generate_hip3_visualizations.py   # Generate all charts
 |-----|-------|-------|
 | Maker fee | 0.02% (0.2 bps) | Limit orders |
 | Taker fee | 0.05% (0.5 bps) | Market orders |
-| Funding | ~1 bps/day | 8h funding rate |
+| Funding | Variable per bar (±0.1% to ±2%/day typical) | **Hourly** settlement (24×/day), 0.01% per 8h base interest, capped at 4%/hour |
 | Adverse selection | 40% | Discount on theoretical spread |
 
 ---
