@@ -31,7 +31,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from hyperliquid_hip3_client import generate_synthetic_hip3_data
+from hyperliquid_hip3_client import (
+    generate_synthetic_hip3_data, load_real_hip3_data,
+)
 from iv_arbitrage_engine import IVArbitrageEngine
 from greeks_strategies import GreeksStrategyEngine, classify_regime
 
@@ -431,8 +433,17 @@ def main():
     print('  Lopez de Prado (2018) | Hansen SPA (2005) | Regime-adaptive')
     print('='*90)
 
-    print('\nGenerating HIP-3 synthetic market data (per-asset history since HIP-3 launch) ...')
-    data = generate_synthetic_hip3_data(n_assets=25, min_days=100)
+    # Use REAL Hyperliquid HIP-3 candles + funding rates (cached in data/).
+    # Falls back to synthetic generator if the cache is missing.
+    data = load_real_hip3_data(min_days=100)
+    if data:
+        print(f'\nLoaded REAL HIP-3 data (candles + funding) for {len(data)} assets '
+              f'from Hyperliquid API cache (data/candles + data/funding_rates).')
+    else:
+        print('\nReal cache missing — falling back to synthetic HIP-3 market data.')
+        print('Run `python3 scripts/fetch_hip3_candles.py` and '
+              '`python3 scripts/fetch_hip3_funding.py` first.')
+        data = generate_synthetic_hip3_data(n_assets=25, min_days=100)
 
     arb_engine = IVArbitrageEngine()
     nc = len(list(product(*PARAM_GRID.values())))

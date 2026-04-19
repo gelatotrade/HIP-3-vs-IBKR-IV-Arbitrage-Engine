@@ -421,8 +421,87 @@ def fetch_hip3_iv_data(tokens: List[str] = None) -> pd.DataFrame:
 # ──────────────────────────────────────────────────────────────
 # Synthetic HIP-3 data generation (for backtesting when API unavailable)
 # ──────────────────────────────────────────────────────────────
+# Cache locations for real HIP-3 data (fetched via fetch_hip3_*.py scripts)
+from pathlib import Path as _Path
+DATA_DIR         = _Path(__file__).resolve().parent.parent / "data"
+FUNDING_CACHE_DIR = DATA_DIR / "funding_rates"
+CANDLES_CACHE_DIR = DATA_DIR / "candles"
+
+
+def load_real_hip3_data(min_days: int = 100,
+                        assets: Optional[List[str]] = None) -> Dict[str, pd.DataFrame]:
+    """Load cached REAL HIP-3 OHLCV candles + funding rates from data/.
+
+    Reads candles from data/candles/{asset}.csv (fetched via fetch_hip3_candles.py)
+    and merges the corresponding daily funding series from data/funding_rates/.
+    Returns the same dict[asset→DataFrame] shape as `generate_synthetic_hip3_data`,
+    with columns: timestamp, open, high, low, close, volume, funding_rate.
+
+    Assets with fewer than `min_days` of history are excluded.
+    """
+    if not CANDLES_CACHE_DIR.exists():
+        return {}
+
+    if assets is None:
+        assets = HIP3_TOKENS
+
+    data: Dict[str, pd.DataFrame] = {}
+    for asset in assets:
+        cpath = CANDLES_CACHE_DIR / f"{asset}.csv"
+        if not cpath.exists():
+            continue
+        df = pd.read_csv(cpath, parse_dates=["timestamp"])
+        if df.empty or len(df) < min_days:
+            continue
+
+        # Merge daily funding rates by calendar date (UTC).
+        fpath = FUNDING_CACHE_DIR / f"{asset}_daily.csv"
+        if fpath.exists():
+            fdf = pd.read_csv(fpath, parse_dates=["timestamp"])
+            fdf = fdf.rename(columns={"timestamp": "funding_ts"})
+            # Align by date (strip tz so both match)
+            df["_date"] = pd.to_datetime(df["timestamp"]).dt.tz_localize(None).dt.normalize()
+            fdf["_date"] = pd.to_datetime(fdf["funding_ts"]).dt.tz_localize(None).dt.normalize()
+            df = df.merge(fdf[["_date", "funding_rate"]], on="_date", how="left")
+            df = df.drop(columns=["_date"])
+            # Fill gaps with the asset's historical mean funding (rare)
+            df["funding_rate"] = df["funding_rate"].fillna(df["funding_rate"].mean())
+        else:
+            # Fallback: zero funding (will be overridden by synthetic model if needed)
+            df["funding_rate"] = 0.0
+
+        data[asset] = df.reset_index(drop=True)
+
+    return data
+
+
+def load_real_funding_daily(asset: str, n_days: int) -> Optional[np.ndarray]:
+    """Load cached real Hyperliquid funding rates for a HIP-3 asset.
+
+    Returns an array of daily funding rates aligned to the last n_days,
+    or None if the cache file is missing. Daily rate = sum of 24 hourly
+    settlements (Hyperliquid mechanism).
+    """
+    path = FUNDING_CACHE_DIR / f"{asset}_daily.csv"
+    if not path.exists():
+        return None
+    try:
+        df = pd.read_csv(path, parse_dates=["timestamp"])
+        if df.empty or "funding_rate" not in df.columns:
+            return None
+        # Take the last n_days rows; if fewer, pad start with the mean
+        values = df["funding_rate"].values
+        if len(values) >= n_days:
+            return values[-n_days:].astype(float)
+        pad = np.full(n_days - len(values), float(values.mean()))
+        return np.concatenate([pad, values.astype(float)])
+    except Exception:
+        return None
+
+
 def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = None,
-                                  seed: int = 42, min_days: int = 100) -> Dict[str, pd.DataFrame]:
+                                  seed: int = 42, min_days: int = 100,
+                                  use_real_funding: bool = True) -> Dict[str, pd.DataFrame]:
     """Generate realistic synthetic HIP-3 market data for backtesting.
 
     Uses per-asset launch dates from HIP3_LAUNCH_DATES. Each asset gets
@@ -537,6 +616,9 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = None,
         f_mult = funding_vol_mult[asset_class_map.get(name, 'mega_cap')]
         regime_funding_mult = {'bull': 1.5, 'normal': 1.0, 'bear': 1.5, 'crisis': 3.5}
 
+        # Prefer real cached Hyperliquid funding rates when available.
+        real_funding = load_real_funding_daily(name, asset_days) if use_real_funding else None
+
         for d in range(asset_days):
             regime = regimes[regime_seq[d]]
             rp = regime_params[regime]
@@ -556,20 +638,19 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = None,
             vol_regime_mult = {'bull': 1.2, 'normal': 1.0, 'bear': 1.5, 'crisis': 3.0}
             volume = base_vol * vol_regime_mult[regime] * start_price
 
-            # Variable funding rate (daily, aggregated from hourly settlements).
-            # Components:
-            #   1. Base interest baseline (~3 bp/day)
-            #   2. Momentum-driven premium: longs pay funding in uptrends
-            #   3. Vol-driven noise: high-vol regimes amplify funding spread
-            recent_returns.append(ret)
-            if len(recent_returns) > 7:
-                recent_returns.pop(0)
-            mom_7d = sum(recent_returns)
-            momentum_funding = mom_7d * 0.05 * f_mult  # ~5% of momentum flows to funding
-            noise = rng.normal(0, 0.0006) * regime_funding_mult[regime] * f_mult
-            funding_daily = BASE_INTEREST_DAILY + momentum_funding + noise
-            # Cap at ±2% per day (well within Hyperliquid's 4%/hour cap on aggregate)
-            funding_daily = float(np.clip(funding_daily, -0.02, 0.02))
+            # Variable funding rate: use real cached Hyperliquid data when
+            # available, else fall back to synthetic (momentum + regime noise).
+            if real_funding is not None and d < len(real_funding):
+                funding_daily = float(real_funding[d])
+            else:
+                recent_returns.append(ret)
+                if len(recent_returns) > 7:
+                    recent_returns.pop(0)
+                mom_7d = sum(recent_returns)
+                momentum_funding = mom_7d * 0.05 * f_mult
+                noise = rng.normal(0, 0.0006) * regime_funding_mult[regime] * f_mult
+                funding_daily = BASE_INTEREST_DAILY + momentum_funding + noise
+                funding_daily = float(np.clip(funding_daily, -0.02, 0.02))
 
             timestamps.append(launch_date + timedelta(days=d))
             opens.append(max(open_price, 1e-10))
