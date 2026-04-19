@@ -85,23 +85,27 @@ def ewma_vol(returns, span=20):
 def generate_funding_history(prices, seed=42):
     """Generate realistic variable funding rates tied to price dynamics.
 
-    Funding rates on Hyperliquid perps (equities/commodities/ETFs):
-      - Settled every 8 hours (3x/day)
-      - Positive when longs pay shorts (bullish bias)
-      - Negative when shorts pay longs (bearish bias)
-      - Ranges: -0.05% to +0.15% per 8h typically, spikes to +-0.5% in extremes
-      - Correlated with momentum and open interest dynamics
+    Hyperliquid funding mechanism (per official docs):
+      - Settled HOURLY (24x/day), each settlement = computed_8h_rate / 8
+      - Base interest rate: 0.01% per 8h (~3 bp/day baseline)
+      - Premium-driven: longs pay when perp > oracle, shorts pay otherwise
+      - Cap: 4% per HOUR (very generous; rarely binds)
+      - HIP-3 markets use a different premium calc allowing wider funding ranges
+
+    Returns daily funding (sum of 24 hourly settlements) and the full hourly
+    series. Daily values are typically in the ±0.5% range under normal regimes
+    and can spike to ±2% in stress.
     """
     rng = np.random.default_rng(seed)
     N = len(prices)
     returns = np.zeros(N)
     returns[1:] = np.diff(np.log(prices))
 
-    # 3 funding settlements per day
-    funding_8h = np.zeros(N * 3)
+    HOURS_PER_DAY = 24
+    BASE_INTEREST_HOURLY = 0.0001 / 8.0  # 0.01% per 8h → per hour
+    funding_hourly = np.zeros(N * HOURS_PER_DAY)
 
     for i in range(N):
-        # Base funding from momentum
         if i >= 20:
             mom_20d = np.sum(returns[max(0,i-20):i])
             rv = np.std(returns[max(0,i-20):i], ddof=1) * np.sqrt(365)
@@ -109,27 +113,23 @@ def generate_funding_history(prices, seed=42):
             mom_20d = 0
             rv = 0.5
 
-        # Funding = f(momentum, vol, noise)
-        base_funding = mom_20d * 0.003  # momentum drives funding direction
-        vol_component = rv * 0.00005    # high vol -> slightly positive funding
-        noise = rng.normal(0, 0.0002)   # random noise
-
-        for j in range(3):
-            idx = i * 3 + j
-            if idx < len(funding_8h):
-                # Add intraday variation
-                intraday_noise = rng.normal(0, 0.00005)
-                funding_8h[idx] = np.clip(
-                    base_funding + vol_component + noise + intraday_noise,
-                    -0.005, 0.005  # cap at +-0.5% per 8h
+        # Per-hour premium: momentum-driven, scaled down to hourly
+        premium_hourly = mom_20d * 0.0002         # momentum pressure on basis
+        vol_component  = rv * 0.000003            # vol amplifies funding
+        for h in range(HOURS_PER_DAY):
+            idx = i * HOURS_PER_DAY + h
+            if idx < len(funding_hourly):
+                noise = rng.normal(0, 0.00005)    # hourly intra-day noise
+                funding_hourly[idx] = np.clip(
+                    BASE_INTEREST_HOURLY + premium_hourly + vol_component + noise,
+                    -0.04, 0.04                   # 4%/hour cap (Hyperliquid)
                 )
 
-    # Aggregate to daily (sum of 3 settlements)
     daily_funding = np.zeros(N)
     for i in range(N):
-        daily_funding[i] = np.sum(funding_8h[i*3:(i+1)*3])
+        daily_funding[i] = np.sum(funding_hourly[i*HOURS_PER_DAY:(i+1)*HOURS_PER_DAY])
 
-    return daily_funding, funding_8h
+    return daily_funding, funding_hourly
 
 
 # ──────────────────────────────────────────────────────────────
@@ -250,13 +250,16 @@ def rolling_backtest_asset(opens, highs, lows, closes, funding_daily,
             vol_spread = hip3_iv[i] - ibkr_iv[i]
             iv_signal = -np.sign(vol_spread) * min(abs(vol_spread) * 2, 0.10)
             iv_pnl = iv_signal * abs(returns[i]) * 0.4
-            iv_pnl -= abs(iv_signal) * 0.0001  # funding cost
+            # IV-arb leg pays variable funding proportional to position direction
+            f_today = funding_daily[i] if i < len(funding_daily) else 0.0
+            iv_pnl -= iv_signal * f_today * 0.4
 
-        # ── Funding rate P&L (variable, from history) ──
+        # ── Funding rate P&L (variable, from hourly Hyperliquid mechanism) ──
         funding_pnl = 0.0
         if i < len(funding_daily):
-            # If we're long, we pay funding when positive, receive when negative
-            funding_pnl = -base * funding_daily[i]  # long pays positive funding
+            # Long position pays funding when positive, receives when negative.
+            # Sign convention: P&L = -position * funding_rate (long = +base, pays +funding)
+            funding_pnl = -base * funding_daily[i]
 
         # ── Total daily P&L ──
         base_pnl = base * returns[i]

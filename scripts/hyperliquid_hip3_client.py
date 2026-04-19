@@ -338,8 +338,9 @@ class HyperliquidHIP3Client:
         if spread_iv is not None and spread_iv > 0:
             components.append(spread_iv)
         if funding is not None:
-            # Annualize 8h funding rate → vol premium
-            funding_ann = abs(funding) * 3 * 365  # 3x per day
+            # Hyperliquid funding is settled hourly (24x/day).
+            # API returns the per-hour rate; annualize via 24*365.
+            funding_ann = abs(funding) * 24 * 365
             vol_premium = np.sqrt(funding_ann) if funding_ann > 0 else 0
             if vol_premium > 0:
                 components.append(rv_20d * (1 + vol_premium) if rv_20d else vol_premium)
@@ -433,6 +434,10 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = None,
     - Fat tails (Student-t innovations)
     - Regime switching (bull/bear/crisis)
     - Volume clustering
+    - Variable hourly funding rates (Hyperliquid mechanism: hourly settlement,
+      premium-driven, 0.01% base interest, capped at 4%/hour). Daily funding
+      rate aggregates 24 hourly settlements and is correlated with momentum
+      (longs pay in uptrends) and volatility regime (crisis → wider swings).
     """
     rng = np.random.default_rng(seed)
 
@@ -503,7 +508,34 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = None,
 
         # Generate returns with regime-dependent dynamics
         timestamps, opens, highs, lows, closes, volumes = [], [], [], [], [], []
+        funding_rates_daily = []
         price = start_price
+        recent_returns = []
+
+        # Hyperliquid funding mechanism (per docs):
+        # - Settled hourly (24x/day), each hour pays = computed_8h_rate / 8
+        # - Base interest rate = 0.01% per 8h (~3 bps/day baseline)
+        # - Premium component drives variation (long bias → positive funding)
+        # - Cap: ±4% per hour. HIP-3 markets may show wider swings than
+        #   majors due to lower liquidity. Per-asset multiplier scales spread.
+        BASE_INTEREST_DAILY = 0.0001 * 3   # 0.01% per 8h × 3 = ~3 bp/day
+        funding_vol_mult = {              # asset-class funding volatility scaling
+            'crypto_proxy': 2.5,           # MSTR, COIN — track BTC, wider funding
+            'high_beta':    1.8,           # NVDA, TSLA, AMD, PLTR
+            'mega_cap':     1.0,           # AAPL, MSFT, AMZN, GOOGL, META, NFLX
+            'commodity':    0.7,           # GOLD, SILVER, OIL
+            'index':        0.5,           # SPY, QQQ
+        }
+        asset_class_map = {
+            'MSTR': 'crypto_proxy', 'COIN': 'crypto_proxy',
+            'NVDA': 'high_beta', 'TSLA': 'high_beta', 'AMD': 'high_beta', 'PLTR': 'high_beta',
+            'AAPL': 'mega_cap', 'MSFT': 'mega_cap', 'AMZN': 'mega_cap',
+            'GOOGL': 'mega_cap', 'META': 'mega_cap', 'NFLX': 'mega_cap',
+            'GOLD': 'commodity', 'SILVER': 'commodity', 'OIL': 'commodity',
+            'SPY': 'index', 'QQQ': 'index',
+        }
+        f_mult = funding_vol_mult[asset_class_map.get(name, 'mega_cap')]
+        regime_funding_mult = {'bull': 1.5, 'normal': 1.0, 'bear': 1.5, 'crisis': 3.5}
 
         for d in range(asset_days):
             regime = regimes[regime_seq[d]]
@@ -524,17 +556,34 @@ def generate_synthetic_hip3_data(n_assets: int = 15, n_days: int = None,
             vol_regime_mult = {'bull': 1.2, 'normal': 1.0, 'bear': 1.5, 'crisis': 3.0}
             volume = base_vol * vol_regime_mult[regime] * start_price
 
+            # Variable funding rate (daily, aggregated from hourly settlements).
+            # Components:
+            #   1. Base interest baseline (~3 bp/day)
+            #   2. Momentum-driven premium: longs pay funding in uptrends
+            #   3. Vol-driven noise: high-vol regimes amplify funding spread
+            recent_returns.append(ret)
+            if len(recent_returns) > 7:
+                recent_returns.pop(0)
+            mom_7d = sum(recent_returns)
+            momentum_funding = mom_7d * 0.05 * f_mult  # ~5% of momentum flows to funding
+            noise = rng.normal(0, 0.0006) * regime_funding_mult[regime] * f_mult
+            funding_daily = BASE_INTEREST_DAILY + momentum_funding + noise
+            # Cap at ±2% per day (well within Hyperliquid's 4%/hour cap on aggregate)
+            funding_daily = float(np.clip(funding_daily, -0.02, 0.02))
+
             timestamps.append(launch_date + timedelta(days=d))
             opens.append(max(open_price, 1e-10))
             highs.append(max(high_price, 1e-10))
             lows.append(max(low_price, 1e-10))
             closes.append(max(close_price, 1e-10))
             volumes.append(volume)
+            funding_rates_daily.append(funding_daily)
             price = close_price
 
         data[name] = pd.DataFrame({
             'timestamp': timestamps, 'open': opens, 'high': highs,
             'low': lows, 'close': closes, 'volume': volumes,
+            'funding_rate': funding_rates_daily,
         })
 
     return data
