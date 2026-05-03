@@ -27,7 +27,7 @@ HIP-3 perp markets on Hyperliquid price volatility **differently** than traditio
 | Arbitrage Type | HIP-3 Behavior | IBKR Behavior | Edge |
 |---|---|---|---|
 | **Vol Spread** | IV from funding + spread dynamics | IV from options market | Trade the difference |
-| **Term Structure** | Flat vol (single funding rate) | Rich term structure (contango/backwardo) | Calendar spreads |
+| **Term Structure** | Flat vol (single funding rate) | Rich term structure (contango/backwardation) | Calendar spreads |
 | **Skew** | Symmetric vol pricing | Negative put skew | Risk reversals |
 | **Higher-Order Greeks** | Not priced (linear payoff) | Fully priced (convex payoff) | Gamma/vanna/vomma arb |
 
@@ -97,16 +97,16 @@ The heatmap shows the IV spread (HIP-3 minus IBKR) across all 16 assets over tim
 
 ---
 
-## Regime Dashboard — SPY
+## Regime Dashboard — SPY (Animated)
 
-The engine detects 5 market regimes using 20-day rolling volatility, momentum, and vol trend. Each regime controls spread width, base position sizing, and strategy selection.
+The animated regime dashboard shows 5 market regimes building up over time using 20-day rolling volatility, momentum, and vol trend. Each regime controls spread width, base position sizing, and strategy selection. The animation cycles through trading days, showing regime transitions in real time.
 
-![Regime Dashboard](docs/img/hip3_regime_dashboard.png)
+![Regime Dashboard](docs/img/hip3_regime_dashboard.gif)
 
-**Panels:**
+**Five panels (50 frames, dark terminal aesthetic):**
 - **Top**: SPY price colored by regime — green (BULL), blue (NORMAL), yellow (CAUTIOUS), red (CRISIS), cyan (RECOVERY)
 - **Mid-Left**: 20d rolling volatility with crisis/cautious thresholds
-- **Mid-Right**: Regime distribution (bar chart)
+- **Mid-Right**: Regime distribution (bar chart) — counts update as new bars arrive
 - **Bottom-Left**: Market-making spread multiplier over time (0.8x in BULL → 3.0x in CRISIS)
 - **Bottom-Right**: Base position sizing (110% in BULL → 35% in CRISIS)
 
@@ -223,7 +223,7 @@ Sorted by alpha. Real HIP-3 data, Purged K-Fold CV, real CBOE/OPRA IV anchor, Ha
 > **Bold DSR > 0.94** is a 95% confidence that the Sharpe is genuinely positive after deflating for skew, kurtosis, and trial count.
 
 > Pipeline: `python3 scripts/fetch_all_hip3.py && python3 scripts/run_all_hip3_premium.py`
-> Output: `results/hip3_all_premium_results.csv`, `docs/img/hip3_all_premium_*.png`
+> Output: `results/hip3_all_premium_results.csv`, `docs/img/hip3_all_premium_summary.png`, `docs/img/hip3_all_premium_equity_curves.png`
 
 ---
 
@@ -251,11 +251,11 @@ All launch dates were verified via the Hyperliquid `candleSnapshot` API (first o
 | OIL | xyz:CL (WTI) | 2026-01-06 | 100 | xyz |
 | SPY | xyz:SP500 | 2026-03-18 | 29 | xyz (officially S&P DJI licensed) |
 
-> **Excluded from backtests** (too short, delisted, or not actually on HIP-3): GME (delisted 2026-02-03), UBER, SQ, SHOP, ARM, SMCI, NKE, SNOW (none deployed on any HIP-3 DEX as of 2026-04-16). SPY is loaded but skipped in the backtest (only 29 days < MIN_TRAIN + MIN_TEST).
+> **Excluded from backtests** (too short, delisted, or not actually on HIP-3): GME (delisted 2026-02-03), UBER, SQ, SHOP, ARM, SMCI, NKE, SNOW (none deployed on any HIP-3 DEX as of 2026-05-03). SPY is loaded but skipped in the backtest (only 29 days < MIN_TRAIN + MIN_TEST).
 
 ### Performance Table (Real HIP-3 Data, Purged K-Fold CV, Variable Hourly Funding)
 
-Data source: real Hyperliquid API candles + funding history, per asset from on-chain HIP-3 launch through 2026-04-16.
+Data source: real Hyperliquid API candles + funding history, per asset from on-chain HIP-3 launch through 2026-05-03.
 
 | Asset | OOS Bars | Folds | OOS% | Alpha | Sharpe | SR± | Calmar | MaxDD | DD.Bench | t-stat | df | p(t) | p(SPA) |
 |-------|----------|-------|------|-------|--------|-----|--------|-------|----------|--------|----|----|--------|
@@ -285,7 +285,7 @@ Data source: real Hyperliquid API candles + funding history, per asset from on-c
 | **Data source** | **Real Hyperliquid API** (candles + funding) | — | Fetched via `fetch_hip3_candles.py` + `fetch_hip3_funding.py` |
 | **Methodology** | **Purged K-Fold CV** (purge=2, embargo=3) | — | Lopez de Prado (2018), Ch.7 |
 | **Funding model** | **Real per-asset hourly** (Hyperliquid history, daily aggregate) | — | Applied to base + IV-arb legs |
-| **Backtest period** | **100–185 days per asset** (Oct 13 2025 → Apr 16 2026) | — | Since each asset's verified on-chain HIP-3 launch |
+| **Backtest period** | **100–203 days per asset** (Oct 13 2025 → May 3 2026) | — | Since each asset's verified on-chain HIP-3 launch |
 | **Mean folds / OOS%** | **2.9 folds / 57% OOS** | — | More OOS data than 60/40 split |
 | **Positive alpha** | **16 / 16 assets** | — | — |
 | **Mean alpha** | **+145.6%** | — | On real HIP-3 market data |
@@ -296,7 +296,7 @@ Data source: real Hyperliquid API candles + funding history, per asset from on-c
 | **Mean IV arb/yr** | -9.2% | — | After real variable funding on IV-arb leg |
 | **Hansen SPA sig** | **16 / 16** | — | All assets survive multiple-testing correction |
 | **Paired t-test sig** | **16 / 16** | — | All p < 0.001 |
-| **Assets tested** | 12 US equities, 3 commodities, 1 index | — | 17 verified HIP-3 markets |
+| **Assets tested** | 12 US equities, 3 commodities, 1 index | — | 16 verified HIP-3 markets |
 
 ---
 
@@ -327,33 +327,47 @@ The engine exploits the fact that HIP-3 perps have **linear payoff** (no Greeks)
 
 ```
 scripts/
-├── run_pipeline.py                 # ★ Extended pipeline: 19 assets via yfinance, ARIMA backtest, GIF generation
-├── hyperliquid_hip3_client.py      # HIP-3 API client + real-data loader (17 assets)
+├── run_pipeline_premium.py         # ★ Crème de la Crème: 10 publication-grade quant methods
+├── run_all_hip3_premium.py         # ★ Premium backtest on ALL 52 active HIP-3 markets
+├── run_hip3_premium.py             # Premium backtest on 16 original HIP-3 assets
+├── run_pipeline.py                 # Extended pipeline: 19 assets via yfinance, ARIMA backtest
+├── fetch_all_hip3.py               # ★ Discover + fetch ALL HIP-3 markets (8 deployers, 170+ listings)
+├── fetch_ibkr_options.py           # ★ Fetch real CBOE/OPRA option chains via Yahoo Finance
+├── fetch_hip3_candles.py           # Fetch real OHLCV candles from Hyperliquid API → data/candles/
+├── fetch_hip3_funding.py           # Fetch real hourly funding history → data/funding_rates/
+├── hyperliquid_hip3_client.py      # HIP-3 API client + real-data loader
 ├── ibkr_options_client.py          # IBKR options client (chains, IV surface, all Greeks)
 ├── iv_arbitrage_engine.py          # IV arb engine (vol spread, term structure, skew)
 ├── greeks_strategies.py            # 7 Greeks strategies (gamma, vanna, charm, vomma, speed, color, zomma)
-├── fetch_hip3_candles.py           # Fetch real OHLCV candles from Hyperliquid API → data/candles/
-├── fetch_hip3_funding.py           # Fetch real hourly funding history → data/funding_rates/
 ├── hip3_backtest.py                # Purged K-Fold CV backtest (Hansen SPA, grid search, stat tests)
-├── generate_hip3_visualizations.py # 7 visualizations (3D surfaces, heatmaps, dashboards)
+├── hip3_rolling_backtest.py        # Rolling expanding-window ARIMA-GARCH backtest
+├── generate_hip3_visualizations.py # 5 animated GIFs + 2 static PNGs
 └── run_all.py                      # Pipeline runner
 data/
-├── candles/{asset}.csv             # Real daily OHLCV per HIP-3 asset (from launch date)
+├── all_hip3/candles/{ASSET}.csv    # ★ Real daily OHLCV for ALL 72 HIP-3 assets (from launch)
+├── all_hip3/funding/{ASSET}_daily.csv  # ★ Real daily funding for ALL HIP-3 assets
+├── ibkr_options/{ASSET}_chain.csv  # ★ Real CBOE/OPRA option chains (805–2569 quotes each)
+├── ibkr_options/{ASSET}_svi.csv    # ★ SVI calibration per expiry slice (Gatheral 2004)
+├── candles/{asset}.csv             # Real daily OHLCV per original 16 HIP-3 assets
 └── funding_rates/{asset}_hourly.csv, {asset}_daily.csv  # Real funding history
 results/
-├── hip3_backtest_results.csv       # Full backtest results (real HIP-3 data)
-└── hip3_equity_backtest_results.csv # Extended 19-asset backtest results (yfinance data)
+├── hip3_all_premium_results.csv    # ★ Full 52-market premium backtest results
+├── hip3_real_premium_results.csv   # 16-asset premium backtest results
+├── hip3_backtest_results.csv       # Original backtest results (real HIP-3 data)
+├── hip3_rolling_backtest_results.csv   # Rolling backtest results
+└── hip3_equity_backtest_results.csv    # Extended 19-asset backtest results (yfinance)
 docs/img/
 ├── hip3_trading_dashboard.gif      # ★ Animated trading dashboard (60 frames)
-├── hip3_iv_surface_3d.gif          # ★ Animated 3D IV surface comparison (40 frames)
-├── hip3_greeks_surface_3d.gif      # ★ Animated 3D Greeks surfaces (30 frames)
-├── hip3_equity_curves.gif          # ★ Animated equity curves, top 6 assets (50 frames)
+├── hip3_iv_surface_3d.gif          # ★ Animated 3D IV surface comparison (60 frames)
+├── hip3_greeks_surface_3d.gif      # ★ Animated 3D Greeks surfaces (60 frames)
+├── hip3_equity_curves.gif          # ★ Animated equity curves, top 6 assets (60 frames)
+├── hip3_regime_dashboard.gif       # ★ Animated regime dashboard (50 frames)
+├── hip3_all_premium_summary.png    # ★ 52-market premium summary
+├── hip3_all_premium_equity_curves.png  # ★ Top 24 equity curves (all markets)
+├── hip3_real_premium_summary.png   # 16-asset premium summary
+├── hip3_real_premium_equity_curves.png # 16-asset premium equity curves
 ├── hip3_arbitrage_summary.png      # Alpha & strategy summary
-├── hip3_vol_spread_heatmap.png     # Vol spread heatmap across assets/time
-├── hip3_regime_dashboard.png       # Regime detection + MM parameters
-├── hip3_iv_surface_comparison.png  # Static IV surface comparison
-├── hip3_equity_curves.png          # Static equity curves
-└── hip3_greeks_surface.png         # Static Greeks surfaces
+└── hip3_vol_spread_heatmap.png     # Vol spread heatmap across assets/time
 ```
 
 ### Data Flow
@@ -485,14 +499,14 @@ The optimizer searches 432 combinations and selects per-asset optimal parameters
 
 ## Hyperliquid HIP-3 API
 
-The client connects to the Hyperliquid API to fetch all 17 verified HIP-3 perp markets (US equities, commodities, indices):
+The client connects to the Hyperliquid API to discover and fetch HIP-3 perp markets across all deployers (equities, commodities, indices, thematic baskets, pre-IPO):
 
 ```python
 from hyperliquid_hip3_client import HyperliquidHIP3Client
 
 client = HyperliquidHIP3Client()
 
-# Discover all 17 verified HIP-3 perp markets (equities, commodities, indices)
+# Discover HIP-3 perp markets (equities, commodities, indices)
 markets = client.get_all_hip3_markets()
 
 # Fetch OHLCV candle history
@@ -503,10 +517,11 @@ iv_data = client.compute_implied_vol_from_funding("AAPL")
 ```
 
 **Endpoints used:**
-- `POST /info {"type": "spotMetaAndAssetCtxs"}` — all spot markets + prices/volumes
-- `POST /info {"type": "candleSnapshot"}` — OHLCV candle data
+- `POST /info {"type": "perpDexs"}` — discover all HIP-3 deployer DEXes
+- `POST /info {"type": "metaAndAssetCtxs", "dex": "..."}` — per-deployer assets + prices/volumes/OI
+- `POST /info {"type": "candleSnapshot"}` — OHLCV candle data (per-asset since launch)
+- `POST /info {"type": "fundingHistory"}` — hourly funding rate history
 - `POST /info {"type": "l2Book"}` — L2 orderbook for spread-implied vol
-- `POST /info {"type": "metaAndAssetCtxs"}` — perpetual funding rates
 
 ---
 
@@ -544,16 +559,24 @@ strikes, expiries, iv_matrix = client.get_iv_surface(spot=195, base_iv=0.28)
 # Install dependencies
 pip install -r requirements.txt
 
-# Option A: Real HIP-3 data (Hyperliquid API — 17 verified on-chain assets)
+# ★ Option A: Crème de la Crème — ALL HIP-3 markets (52 assets, premium pipeline)
+python3 scripts/fetch_all_hip3.py                 # Discover + fetch ALL HIP-3 markets via live API
+python3 scripts/fetch_ibkr_options.py             # Fetch real CBOE/OPRA option chains via Yahoo
+python3 scripts/run_all_hip3_premium.py            # Premium backtest with 10 quant methods on all markets
+
+# Option B: Original 16 HIP-3 assets (premium pipeline)
 python3 scripts/fetch_hip3_candles.py             # Real OHLCV per HIP-3 asset
 python3 scripts/fetch_hip3_funding.py             # Real hourly funding history
-python3 scripts/run_all.py                        # Purged K-Fold CV backtest
+python3 scripts/run_hip3_premium.py               # Premium backtest on original 16 assets
 
-# Option B: Extended pipeline (yfinance — 19 assets incl. ETFs, commodities, ~14 min)
+# Option C: Extended pipeline (yfinance — 19 assets incl. ETFs, commodities)
 python3 scripts/run_pipeline.py                   # ARIMA rolling backtest + GIF generation
+
+# Generate animated visualizations (5 GIFs + 2 PNGs)
+python3 scripts/generate_hip3_visualizations.py
 ```
 
-> Option A uses real Hyperliquid API data cached in `data/`. Option B uses yfinance for extended asset coverage (IWM, DIA, EWY, EWZ, EFA, EEM, GLD, SLV, USO) and generates animated GIF visualizations.
+> Option A is the full pipeline: discovers all active HIP-3 markets via the live `perpDexs` API, fetches real CBOE/OPRA option chains, and runs the 10-method premium backtest. Option B focuses on the original 16 assets with deeper per-asset analysis. Option C uses yfinance for extended asset coverage (IWM, DIA, EWY, EWZ, EFA, EEM, GLD, SLV, USO).
 
 ---
 
