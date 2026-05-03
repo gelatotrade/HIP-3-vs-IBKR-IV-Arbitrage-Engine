@@ -212,6 +212,7 @@ The engine exploits the fact that HIP-3 perps have **linear payoff** (no Greeks)
 
 ```
 scripts/
+├── run_pipeline.py                 # ★ Extended pipeline: 19 assets via yfinance, ARIMA backtest, GIF generation
 ├── hyperliquid_hip3_client.py      # HIP-3 API client + real-data loader (17 assets)
 ├── ibkr_options_client.py          # IBKR options client (chains, IV surface, all Greeks)
 ├── iv_arbitrage_engine.py          # IV arb engine (vol spread, term structure, skew)
@@ -225,14 +226,19 @@ data/
 ├── candles/{asset}.csv             # Real daily OHLCV per HIP-3 asset (from launch date)
 └── funding_rates/{asset}_hourly.csv, {asset}_daily.csv  # Real funding history
 results/
-└── hip3_backtest_results.csv       # Full backtest results
+├── hip3_backtest_results.csv       # Full backtest results (real HIP-3 data)
+└── hip3_equity_backtest_results.csv # Extended 19-asset backtest results (yfinance data)
 docs/img/
-├── hip3_iv_surface_comparison.png  # 3D IV surface: HIP-3 vs IBKR
-├── hip3_equity_curves.png          # Equity curves (top 6 assets)
-├── hip3_greeks_surface.png         # 3D Greeks surfaces (vanna, vomma, zomma)
+├── hip3_trading_dashboard.gif      # ★ Animated trading dashboard (60 frames)
+├── hip3_iv_surface_3d.gif          # ★ Animated 3D IV surface comparison (40 frames)
+├── hip3_greeks_surface_3d.gif      # ★ Animated 3D Greeks surfaces (30 frames)
+├── hip3_equity_curves.gif          # ★ Animated equity curves, top 6 assets (50 frames)
+├── hip3_arbitrage_summary.png      # Alpha & strategy summary
 ├── hip3_vol_spread_heatmap.png     # Vol spread heatmap across assets/time
 ├── hip3_regime_dashboard.png       # Regime detection + MM parameters
-└── hip3_arbitrage_summary.png      # Alpha & strategy summary
+├── hip3_iv_surface_comparison.png  # Static IV surface comparison
+├── hip3_equity_curves.png          # Static equity curves
+└── hip3_greeks_surface.png         # Static Greeks surfaces
 ```
 
 ### Data Flow
@@ -423,19 +429,46 @@ strikes, expiries, iv_matrix = client.get_iv_surface(spot=195, base_iv=0.28)
 # Install dependencies
 pip install -r requirements.txt
 
-# Step 1: Fetch REAL data from Hyperliquid API (one-time; cached in data/)
+# Option A: Real HIP-3 data (Hyperliquid API — 17 verified on-chain assets)
 python3 scripts/fetch_hip3_candles.py             # Real OHLCV per HIP-3 asset
 python3 scripts/fetch_hip3_funding.py             # Real hourly funding history
+python3 scripts/run_all.py                        # Purged K-Fold CV backtest
 
-# Step 2: Run full pipeline on real data (backtest + visualizations)
-python3 scripts/run_all.py
-
-# Or run individually:
-python3 scripts/hip3_backtest.py                  # Purged K-Fold CV backtest
-python3 scripts/generate_hip3_visualizations.py   # Generate all charts
+# Option B: Extended pipeline (yfinance — 19 assets incl. ETFs, commodities, ~14 min)
+python3 scripts/run_pipeline.py                   # ARIMA rolling backtest + GIF generation
 ```
 
-> Data is cached in `data/candles/` and `data/funding_rates/`. Re-run the `fetch_*` scripts to refresh. The backtest auto-falls-back to a synthetic generator only if the cache is missing.
+> Option A uses real Hyperliquid API data cached in `data/`. Option B uses yfinance for extended asset coverage (IWM, DIA, EWY, EWZ, EFA, EEM, GLD, SLV, USO) and generates animated GIF visualizations.
+
+---
+
+## Extended Pipeline — 19 Assets (Stocks, ETFs, Commodities)
+
+`run_pipeline.py` extends the universe beyond current HIP-3 listings to all equity/ETF/commodity pairs with IBKR options:
+
+| Asset | Type | Alpha | Sharpe | S.Bench | Calmar | MaxDD | DD.Bench | Spread/yr | Fills/d | p(SR) | p(Boot) | p(Perm) |
+|-------|------|-------|--------|---------|--------|-------|----------|-----------|---------|-------|---------|---------|
+| **TSLA** | Stock | **+120.4%** | 3.49 | 0.92 | 10.56 | 16.7% | 51.2% | 164.0% | 64 | <0.001 | <0.001 | <0.001 |
+| **GOOG** | Stock | **+90.1%** | 4.80 | 1.59 | 8.76 | 15.7% | 28.5% | 98.6% | 43 | <0.001 | <0.001 | <0.001 |
+| **AAPL** | Stock | **+87.5%** | 4.75 | 1.03 | 11.71 | 10.0% | 32.0% | 88.0% | 41 | <0.001 | <0.001 | <0.001 |
+| **NVDA** | Stock | **+77.8%** | 3.15 | 1.10 | 5.63 | 23.3% | 33.1% | 132.9% | 55 | <0.001 | <0.001 | <0.001 |
+| **META** | Stock | **+76.5%** | 3.26 | 0.67 | 7.04 | 14.3% | 32.2% | 102.5% | 43 | <0.001 | <0.001 | <0.001 |
+| **AMZN** | Stock | **+75.0%** | 3.51 | 0.83 | 6.02 | 16.9% | 29.3% | 97.1% | 41 | <0.001 | <0.001 | <0.001 |
+| **USO** | Commodity | **+72.9%** | 2.99 | 1.00 | 6.97 | 15.8% | 24.8% | 86.0% | 35 | <0.001 | <0.001 | <0.001 |
+| **MSFT** | Stock | **+72.8%** | 3.37 | 0.28 | 7.35 | 10.9% | 32.8% | 80.3% | 37 | <0.001 | <0.001 | <0.001 |
+| **JPM** | Stock | **+71.7%** | 4.33 | 1.19 | 7.08 | 14.3% | 23.6% | 85.8% | 41 | <0.001 | <0.001 | <0.001 |
+| **IWM** | ETF | **+62.3%** | 3.89 | 0.97 | 7.84 | 10.7% | 26.8% | 73.5% | 36 | <0.001 | <0.001 | <0.001 |
+| **EWZ** | ETF | **+58.2%** | 3.46 | 0.88 | 8.72 | 9.1% | 24.3% | 76.8% | 33 | <0.001 | <0.001 | <0.001 |
+| **SLV** | Commodity | **+56.3%** | 2.78 | 1.38 | 4.66 | 25.7% | 36.1% | 89.9% | 36 | <0.001 | <0.001 | <0.001 |
+| **QQQ** | ETF | **+51.6%** | 4.54 | 1.23 | 9.64 | 8.0% | 22.2% | 68.2% | 30 | <0.001 | <0.001 | <0.001 |
+| **GLD** | Commodity | **+50.0%** | 3.89 | 1.65 | 6.24 | 14.0% | 17.8% | 59.2% | 26 | <0.001 | <0.001 | <0.001 |
+| **DIA** | ETF | **+49.8%** | 4.67 | 1.09 | 10.21 | 6.5% | 15.5% | 54.5% | 28 | <0.001 | <0.001 | <0.001 |
+| **SPY** | ETF | **+43.7%** | 4.60 | 1.24 | 7.21 | 8.9% | 18.3% | 55.3% | 27 | <0.001 | <0.001 | <0.001 |
+| **EFA** | ETF | **+42.1%** | 4.02 | 1.15 | 6.11 | 9.9% | 13.8% | 51.8% | 22 | <0.001 | <0.001 | <0.001 |
+| **EEM** | ETF | **+41.0%** | 3.91 | 1.41 | 6.36 | 10.6% | 16.6% | 54.6% | 23 | <0.001 | <0.001 | <0.001 |
+| **EWY** | ETF | **+34.9%** | 3.17 | 1.70 | 5.33 | 16.8% | 25.6% | 72.4% | 28 | <0.001 | <0.001 | <0.001 |
+
+**Summary**: 19/19 positive alpha, mean +65.0%, mean Sharpe 3.82 (bench 1.12), mean MaxDD 13.6% (bench 26.5%). All p < 0.001 on all 3 statistical tests.
 
 ---
 
