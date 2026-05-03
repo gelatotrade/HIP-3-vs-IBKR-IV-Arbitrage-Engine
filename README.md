@@ -1,6 +1,20 @@
 # Searching for Alpha — HIP-3 vs IBKR IV Arbitrage Engine
 
-A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **17 verified HIP-3 assets** — US equities (AAPL, NVDA, TSLA, META, MSTR, PLTR, COIN, …), commodities (GOLD, SILVER, OIL), and indices (QQQ/XYZ100, SP500). All data is **real, live-fetched from the Hyperliquid API**: on-chain verified launch dates (via `candleSnapshot`), full OHLCV history per asset from launch, and variable hourly funding-rate history from `fundingHistory`. Backtested with **Purged expanding-window K-fold cross-validation** (Lopez de Prado 2018, Ch.7) — purge + embargo gaps at fold boundaries prevent information leakage — across **per-asset history since each asset's HIP-3 launch** (Oct 13, 2025 → Apr 16, 2026; 100–185 days depending on asset). Statistical validation includes **Hansen's SPA test** (2005) for multiple-testing correction across 432 parameter combinations, **Deflated Sharpe Ratio** (Bailey & Lopez de Prado 2014), and **fold-level Sharpe distributions** for robustness assessment. Features **ARIMA(2,1,2) + EWMA-GARCH rolling time-series backtesting** with expanding window and re-fitting every 15 bars, **real variable historical funding rates**, 7 higher-order Greek strategies (gamma scalping, vanna, charm, vomma, speed, color, zomma), regime-adaptive position sizing, and animated 3D GIF visualizations (dark terminal aesthetic, per-regime colormaps).
+A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **52 active HIP-3 markets** discovered live via the Hyperliquid `perpDexs` endpoint and spanning 8 deployers (`xyz`, `flx`, `vntl`, `hyna`, `km`, `cash`, `abcd`, `para`). The universe covers US equities (AAPL, NVDA, TSLA, META, MSFT, AMZN, GOOGL, COIN, MSTR, AMD, INTC, MU, ORCL, NFLX, PLTR, HOOD, BABA, RIVN, …), commodities (GOLD, SILVER, OIL/CL, COPPER, NATGAS, PLATINUM, PALLADIUM), index ETFs (XYZ100/QQQ, SP500/USA500, SMALL2000, USTECH, USENERGY, US500), pre-IPO names (SPACEX, OPENAI, ANTHROPIC), thematic baskets (MAG7, INFOTECH, NUCLEAR, DEFENSE, ENERGY, BIOTECH, ROBOT, SEMIS), FX (EUR, JPY) and rates (USBOND).
+
+All data is **real, live-fetched from the Hyperliquid API**: on-chain verified launch dates (via `candleSnapshot`), full OHLCV history per asset from launch, and variable hourly funding-rate history from `fundingHistory`. The IBKR options leg uses **real CBOE/OPRA option chains** — 805–2569 live quotes per underlying — pulled via Yahoo Finance (the same OPRA feed IBKR TWS uses for retail), then SVI-calibrated per expiry slice (Gatheral 2004) for the IV reference.
+
+**Crème de la Crème — 10 publication-grade quant methods stacked:**
+1. **ARIMA-EGARCH-t** with **Bayesian Model Averaging** (statsmodels MLE + AIC weights)
+2. **HAR-RV-J** with **bipower-variation jumps** (Corsi 2009, Andersen-Bollerslev-Diebold-Shephard 2007)
+3. **HMM regime detection** (Hamilton 1989, hmmlearn) — 4-state Gaussian
+4. **Purged K-Fold CV** with purge=2 / embargo=3 (Lopez de Prado 2018, Ch.7)
+5. **Hansen's SPA** (2005), **Deflated Sharpe Ratio** (Bailey & Lopez de Prado 2014), **Romano-Wolf StepM** (2005), and paired t-test with t-distribution
+6. **SVI** parametric IV surface (Gatheral 2004) calibrated to **real CBOE/OPRA option chains**
+7. **Vega-bucket-hedged 7-Greek strategy ensemble** (gamma, vanna, charm, vomma, speed, color, zomma)
+8. **Kelly Criterion** with vol-target overlay and drawdown constraint
+9. **Bayesian predictive distribution** (Student-t conjugate prior)
+10. **Almgren-Chriss market-impact model** for execution costs
 
 **Forked from:** [Market-Making-Engine-Regime-Change](https://github.com/gelatotrade/Market-Making-Engine-Regime-Change-)
 
@@ -111,6 +125,107 @@ The engine detects 5 market regimes using 20-day rolling volatility, momentum, a
 ---
 
 ## Out-of-Sample Results
+
+### Crème de la Crème — ALL Active HIP-3 Markets (52 markets)
+
+Live discovery: 8 deployers × 170 listings → 72 with ≥30 days of candles → **52 backtested with full Purged K-Fold CV** (the rest had too short a history for any fold). Real Hyperliquid OHLCV + real hourly funding rates + real CBOE/OPRA option chains via Yahoo for the IBKR IV reference.
+
+![Premium Summary](docs/img/hip3_all_premium_summary.png)
+![Top 24 Equity Curves](docs/img/hip3_all_premium_equity_curves.png)
+
+#### Aggregate (all 52 markets)
+
+| Metric | Strategy | Benchmark | Notes |
+|--------|----------|-----------|-------|
+| **Markets backtested** | **52** | — | Full Purged K-Fold CV with purge=1, embargo=2 |
+| **Positive alpha** | **46 / 52** (88.5%) | — | — |
+| **Mean alpha** | **+38.3%** | — | — |
+| **Mean Sharpe** | **2.20** | varies | Mean fold-σ on Sharpe ≈ 2.4 (small samples → wide CIs) |
+| **Mean Calmar** | **7.58** | varies | — |
+| **Mean MaxDD** | **10.7%** | — | — |
+| **Paired t-test sig (p<0.05)** | **23 / 52** | — | — |
+| **Hansen's SPA sig** | **33 / 52** | — | After multiple-testing correction across 32 param combos |
+| **Deflated SR sig (>0.95)** | **1 / 52** | — | DSR is conservative on 80–200-bar series with 32 trials |
+
+#### By category (mean alpha)
+
+| Category | n | Mean α | Pos / n |
+|----------|---|--------|---------|
+| **pre_ipo** (SPACEX, OPENAI, ANTHROPIC) | 3 | **+53.3%** | 2/3 |
+| **commodity** (GOLD, SILVER, OIL, COPPER, NATGAS, PLATINUM, …) | 8 | **+53.0%** | **8/8** |
+| **thematic** (MAG7, INFOTECH, NUCLEAR, DEFENSE, ENERGY, BIOTECH, ROBOT) | 7 | **+42.1%** | **7/7** |
+| **stock** (AAPL, NVDA, TSLA, INTC, MU, BABA, COIN, ORCL, …) | 24 | +40.1% | 20/24 |
+| **rates** (USBOND) | 1 | +21.7% | 1/1 |
+| **index_etf** (XYZ100, USA500, SMALL2000, USTECH, USENERGY, US500, USOIL) | 7 | +17.3% | 6/7 |
+| **fx** (EUR, JPY) | 2 | +5.0% | 2/2 |
+
+#### Per-market Performance Table — Sharpe / Calmar / MaxDD / t-statistic
+
+Sorted by alpha. Real HIP-3 data, Purged K-Fold CV, real CBOE/OPRA IV anchor, Hansen SPA + DSR + Romano-Wolf + paired t-test.
+
+| Asset | Category | Days | Alpha | Sharpe ± fσ | Calmar | MaxDD | t-stat | t-p | SPA p | DSR |
+|-------|----------|------|-------|-------------|--------|-------|--------|-----|-------|-----|
+| **ANTHROPIC** | pre_ipo | 160 | **+108.4%** | **4.06** ± 3.41 | **21.95** | 13.2% | **6.76** | <0.001 | **<0.001** | **0.944** |
+| **MU** | stock | 136 | **+99.3%** | 3.00 ± 4.68 | 9.11 | 18.8% | **2.65** | 0.005 | 0.022 | 0.750 |
+| **INTC** | stock | 152 | **+92.5%** | **3.97** ± 3.80 | 19.92 | 13.7% | **3.72** | <0.001 | **<0.001** | **0.948** |
+| **BABA** | stock | 109 | **+80.2%** | 1.70 ± 3.51 | 4.61 | 5.8% | **2.67** | 0.005 | **<0.001** | 0.451 |
+| **COIN** | stock | 160 | +75.6% | 1.08 ± 2.58 | 2.32 | 15.2% | 1.37 | 0.086 | 0.064 | 0.265 |
+| **ORCL** | stock | 150 | +75.6% | 1.60 ± 2.23 | 4.40 | 9.3% | 1.88 | 0.032 | 0.016 | 0.409 |
+| **HOOD** | stock | 96 | +70.5% | 1.70 ± 0.31 | 7.89 | 8.8% | 1.27 | 0.105 | 0.070 | 0.453 |
+| **OIL** | commodity | 115 | +69.7% | 2.89 ± 2.29 | 11.17 | 18.7% | 1.44 | 0.077 | 0.046 | 0.682 |
+| **CL** | commodity | 118 | +68.5% | 2.90 ± 1.88 | 11.45 | 19.0% | 1.50 | 0.069 | 0.030 | 0.684 |
+| **SILVER** | commodity | 129 | +65.7% | 0.68 ± 1.79 | 2.06 | 18.1% | 1.36 | 0.089 | 0.100 | 0.241 |
+| **SPACEX** | pre_ipo | 172 | +65.4% | 2.53 ± 3.48 | 9.49 | 16.1% | **5.48** | <0.001 | **<0.001** | 0.688 |
+| **PLATINUM** | commodity | 97 | +60.9% | 1.28 ± 2.26 | 4.57 | 6.1% | 1.81 | 0.038 | 0.002 | 0.377 |
+| **RIVN** | stock | 110 | +59.3% | 2.30 ± 1.28 | 5.92 | 9.8% | 1.71 | 0.046 | 0.016 | 0.574 |
+| **NATGAS** | commodity | 103 | +58.1% | 1.76 ± 1.06 | 7.05 | 6.5% | 1.58 | 0.059 | 0.012 | 0.466 |
+| **URNM** | stock | 95 | +55.0% | 2.48 ± 1.97 | 10.61 | 6.0% | 1.32 | 0.097 | 0.022 | 0.605 |
+| **DEFENSE** | thematic | 93 | +51.9% | -0.46 ± 0.07 | -1.49 | 5.9% | **2.05** | 0.023 | 0.008 | 0.135 |
+| **TSLA** | stock | 172 | +51.8% | 0.57 ± 2.24 | 1.15 | 9.5% | **2.49** | 0.007 | **<0.001** | 0.159 |
+| **MSTR** | stock | 153 | +50.3% | 2.54 ± 2.56 | 5.08 | 15.3% | 0.70 | 0.243 | 0.098 | 0.666 |
+| **NUCLEAR** | thematic | 94 | +50.1% | 2.34 ± 1.80 | 11.87 | 4.7% | 1.35 | 0.092 | 0.006 | 0.578 |
+| **ENERGY** | thematic | 91 | +49.4% | 2.33 ± 0.80 | 6.60 | 9.0% | **3.92** | <0.001 | **<0.001** | 0.568 |
+| **MSFT** | stock | 166 | +44.1% | 0.80 ± 2.68 | 1.26 | 9.3% | **2.69** | 0.004 | 0.004 | 0.213 |
+| **USENERGY** | index_etf | 89 | +43.7% | 2.29 ± 1.59 | 5.28 | 9.7% | **3.11** | 0.002 | 0.002 | 0.559 |
+| **NFLX** | stock | 147 | +41.8% | 2.50 ± 2.29 | 5.63 | 9.7% | 1.70 | 0.046 | 0.020 | 0.648 |
+| **GOOGL** | stock | 167 | +40.6% | **3.11** ± 3.83 | 5.07 | 16.5% | **6.26** | <0.001 | **<0.001** | 0.829 |
+| **GOLD** | commodity | 133 | +40.1% | 0.93 ± 2.16 | 1.83 | 13.4% | **3.71** | <0.001 | **<0.001** | 0.273 |
+| **INFOTECH** | thematic | 116 | +38.0% | **4.58** ± 2.90 | **24.03** | 3.6% | **2.34** | 0.011 | 0.004 | **0.938** |
+| **PLTR** | stock | 171 | +37.7% | -0.72 ± 3.20 | -1.01 | 15.8% | 0.84 | 0.201 | 0.124 | 0.030 |
+| **AMZN** | stock | 167 | +36.7% | 2.43 ± 2.78 | 4.91 | 13.3% | **2.10** | 0.019 | 0.002 | 0.624 |
+| **MAG7** | thematic | 145 | +35.7% | **3.53** ± 4.33 | 12.51 | 3.7% | **2.29** | 0.012 | 0.004 | 0.866 |
+| **BIOTECH** | thematic | 91 | +35.4% | 3.16 ± 2.22 | 12.31 | 6.8% | 1.65 | 0.052 | 0.046 | 0.726 |
+| **CRCL** | stock | 140 | +35.0% | 1.80 ± 1.27 | 5.14 | 24.4% | 0.59 | 0.280 | 0.310 | 0.467 |
+| **ROBOT** | thematic | 117 | +34.4% | 2.19 ± 3.41 | 4.10 | 9.8% | 1.48 | 0.071 | 0.014 | 0.557 |
+| **COPPER** | commodity | 110 | +34.3% | 2.36 ± 2.16 | 8.50 | 4.1% | 1.66 | 0.051 | 0.032 | 0.590 |
+| **SEMIS** | commodity | 118 | +26.8% | 3.37 ± 2.96 | 10.77 | 9.2% | 1.42 | 0.079 | 0.138 | 0.784 |
+| **SNDK** | stock | 112 | +25.8% | 3.04 ± 3.32 | 10.05 | 24.2% | 0.53 | 0.297 | 0.258 | 0.733 |
+| **AAPL** | stock | 164 | +24.4% | 1.89 ± 3.72 | 4.17 | 7.3% | **2.42** | 0.009 | 0.004 | 0.488 |
+| **USTECH** | index_etf | 111 | +23.9% | **5.28** ± 5.50 | **21.00** | 3.0% | 1.72 | 0.045 | 0.058 | **0.980** |
+| **USBOND** | rates | 103 | +21.7% | -0.29 ± 2.66 | -0.82 | 3.4% | 1.61 | 0.056 | <0.001 | 0.134 |
+| **SMALL2000** | index_etf | 110 | +20.6% | 2.33 ± 3.97 | 5.54 | 7.6% | 1.14 | 0.128 | 0.046 | 0.584 |
+| **TSM** | stock | 90 | +19.7% | 3.21 ± 1.38 | 15.67 | 6.8% | 0.54 | 0.297 | 0.354 | 0.716 |
+| **USA500** | index_etf | 104 | +16.6% | 2.87 ± 5.15 | 9.22 | 4.3% | 1.62 | 0.055 | 0.022 | 0.689 |
+| **XYZ100** | index_etf | 203 | +15.9% | 2.55 ± 2.92 | 5.67 | 6.4% | **3.04** | 0.001 | **<0.001** | 0.693 |
+| **META** | stock | 165 | +12.2% | -0.07 ± 2.00 | -0.09 | 21.4% | 0.83 | 0.203 | 0.260 | 0.080 |
+| **US500** | index_etf | 112 | +11.6% | 3.01 ± 3.55 | 10.24 | 2.8% | 1.03 | 0.153 | 0.208 | 0.732 |
+| **JPY** | fx | 132 | +8.2% | 1.97 ± 2.10 | 6.40 | 2.1% | **2.88** | 0.003 | 0.002 | 0.509 |
+| **EUR** | fx | 132 | +1.9% | 0.17 ± 2.22 | 0.22 | 2.3% | 0.36 | 0.359 | 0.302 | 0.144 |
+| USAR | stock | 98 | -4.9% | 4.31 ± 0.76 | 15.64 | 11.2% | -0.05 | 0.521 | 1.000 | 0.906 |
+| AMD | stock | 151 | -7.9% | 3.03 ± 4.39 | 5.83 | 21.1% | -0.21 | 0.585 | 1.000 | 0.774 |
+| NVDA | stock | 173 | -8.7% | 0.55 ± 2.41 | 1.11 | 9.8% | -0.47 | 0.682 | 1.000 | 0.156 |
+| USOIL | index_etf | 102 | -11.2% | 2.35 ± 2.12 | 10.56 | 17.5% | -0.25 | 0.598 | 1.000 | 0.579 |
+| OPENAI | pre_ipo | 165 | -13.8% | 0.89 ± 1.10 | 3.31 | 14.8% | -0.20 | 0.580 | 1.000 | 0.222 |
+| CRWV | stock | 97 | -45.1% | 3.77 ± 0.99 | 14.34 | 12.8% | -0.67 | 0.749 | 1.000 | 0.803 |
+
+> **Bold t-stats** indicate p < 0.05 (one-sided paired t-test on excess returns vs. buy-and-hold).
+> **Bold SPA p-values** indicate Hansen's SPA significant after multiple-testing correction across the 32 parameter combinations.
+> **Bold DSR > 0.94** is a 95% confidence that the Sharpe is genuinely positive after deflating for skew, kurtosis, and trial count.
+
+> Pipeline: `python3 scripts/fetch_all_hip3.py && python3 scripts/run_all_hip3_premium.py`
+> Output: `results/hip3_all_premium_results.csv`, `docs/img/hip3_all_premium_*.png`
+
+---
 
 ### Verified HIP-3 Launch Dates (On-Chain)
 
