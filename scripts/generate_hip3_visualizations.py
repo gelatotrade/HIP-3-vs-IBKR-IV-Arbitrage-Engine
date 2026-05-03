@@ -294,7 +294,7 @@ def main():
         bt=rolling_backtest_asset(o,h,l,c,f,arb.compute_hip3_implied_vol(c),arb.compute_ibkr_atm_iv(c),tk)
         all_bt[tk]=bt; curves[tk]=(bt['daily_pnl'][60:],bt['daily_bench'][60:])
     gen_dashboard(data,all_bt); gen_iv(); gen_greeks(); gen_equity(curves); gen_regime(data,all_bt); gen_heatmap(data)
-    csv=Path(__file__).resolve().parent.parent/'results'/'hip3_rolling_backtest_results.csv'
+    csv=Path(__file__).resolve().parent.parent/'results'/'hip3_all_premium_results.csv'
     if not csv.exists(): csv=Path(__file__).resolve().parent.parent/'results'/'hip3_backtest_results.csv'
     gen_summary(csv); print(f'\nDone! Output: {OUT_DIR}')
 
