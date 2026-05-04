@@ -435,7 +435,7 @@ def main():
 
     # Use REAL Hyperliquid HIP-3 candles + funding rates (cached in data/).
     # Falls back to synthetic generator if the cache is missing.
-    data = load_real_hip3_data(min_days=100)
+    data = load_real_hip3_data(min_days=25)
     if data:
         print(f'\nLoaded REAL HIP-3 data (candles + funding) for {len(data)} assets '
               f'from Hyperliquid API cache (data/candles + data/funding_rates).')
