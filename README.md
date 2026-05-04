@@ -1,4 +1,4 @@
-# Searching for Alpha — HIP-3 vs IBKR IV Arbitrage Engine
+HIP-3 vs IBKR IV Arbitrage Engine
 
 A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **52 active HIP-3 markets** discovered live via the Hyperliquid `perpDexs` endpoint and spanning 8 deployers (`xyz`, `flx`, `vntl`, `hyna`, `km`, `cash`, `abcd`, `para`). The universe covers US equities (AAPL, NVDA, TSLA, META, MSFT, AMZN, GOOGL, COIN, MSTR, AMD, INTC, MU, ORCL, NFLX, PLTR, HOOD, BABA, RIVN, …), commodities (GOLD, SILVER, OIL/CL, COPPER, NATGAS, PLATINUM, PALLADIUM), index ETFs (XYZ100/QQQ, SP500/USA500, SMALL2000, USTECH, USENERGY, US500), pre-IPO names (SPACEX, OPENAI, ANTHROPIC), thematic baskets (MAG7, INFOTECH, NUCLEAR, DEFENSE, ENERGY, BIOTECH, ROBOT, SEMIS), FX (EUR, JPY) and rates (USBOND).
 
