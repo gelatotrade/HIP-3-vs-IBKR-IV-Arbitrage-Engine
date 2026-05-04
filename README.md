@@ -1,4 +1,6 @@
-HIP-3 vs IBKR IV Arbitrage Engine
+<h1 align="center">HIP-3 vs IBKR IV Arbitrage Engine</h1>
+
+<p align="center"><i>— Searching for Alpha —</i></p>
 
 A Python-based **IV arbitrage engine** that exploits implied volatility mispricing between **Hyperliquid HIP-3 perp markets** and **IBKR (Interactive Brokers) options chains** across **52 active HIP-3 markets** discovered live via the Hyperliquid `perpDexs` endpoint and spanning 8 deployers (`xyz`, `flx`, `vntl`, `hyna`, `km`, `cash`, `abcd`, `para`). The universe covers US equities (AAPL, NVDA, TSLA, META, MSFT, AMZN, GOOGL, COIN, MSTR, AMD, INTC, MU, ORCL, NFLX, PLTR, HOOD, BABA, RIVN, …), commodities (GOLD, SILVER, OIL/CL, COPPER, NATGAS, PLATINUM, PALLADIUM), index ETFs (XYZ100/QQQ, SP500/USA500, SMALL2000, USTECH, USENERGY, US500), pre-IPO names (SPACEX, OPENAI, ANTHROPIC), thematic baskets (MAG7, INFOTECH, NUCLEAR, DEFENSE, ENERGY, BIOTECH, ROBOT, SEMIS), FX (EUR, JPY) and rates (USBOND).
 
@@ -16,8 +18,6 @@ All data is **real, live-fetched from the Hyperliquid API**: on-chain verified l
 9. **Bayesian predictive distribution** (Student-t conjugate prior)
 10. **Almgren-Chriss market-impact model** for execution costs
 
-**Forked from:** [Market-Making-Engine-Regime-Change](https://github.com/gelatotrade/Market-Making-Engine-Regime-Change-)
-
 ---
 
 ## Core Thesis
@@ -33,15 +33,15 @@ HIP-3 perp markets on Hyperliquid price volatility **differently** than traditio
 
 ### Arbitrage Strategy Surfaces (Animated 3D)
 
-The animated 3D surfaces visualize the four core arbitrage opportunities — rotating through different base IV levels to show how each edge evolves across vol regimes:
+Fixed-camera 3D surfaces — the **camera doesn't move**, only the underlying signal evolves as the IV regime cycles low → high → low. Each panel highlights its **arbitrage zone** with a cyan/red/blue threshold contour and an explicit BUY / SELL annotation showing how to trade the edge:
 
 ![Arbitrage Strategies 3D](docs/img/hip3_arbitrage_strategies_3d.gif)
 
-**Four panels (60 frames, dark terminal aesthetic):**
-- **Vol Spread**: HIP3 − IBKR IV difference across moneyness × DTE — red = sell vol on HIP-3, blue = buy
-- **Term Structure**: Flat HIP-3 funding rate vs curved IBKR term structure — the calendar spread signal
-- **Skew Arb**: Symmetric HIP-3 pricing vs IBKR's negative put skew — risk reversal opportunities
-- **Higher-Order Greeks**: Γ + |Vanna| + |Vomma| surface across spot/strike × IV — pure convexity edge
+**Four panels (60 frames, dark terminal aesthetic, diverging colormap):**
+- **Vol Spread**: HIP3 − IBKR IV difference across moneyness × DTE. Red zone = SELL VOL HIP-3, blue zone = BUY VOL HIP-3. The "ARB ZONE %" caption reports how much of the surface exceeds the 5 vol-pt threshold.
+- **Term Structure**: Flat HIP-3 funding-implied vol vs curved IBKR term structure. Red = sell back / buy front; blue = buy back / sell front (calendar spread).
+- **Skew Arb**: Symmetric HIP-3 pricing vs IBKR's negative put skew. The skew gap is largest in OTM puts (left edge of the surface) — exactly where risk-reversal trades produce the cleanest edge.
+- **Higher-Order Greeks**: Γ + |Vanna| + |Vomma| surface across spot/strike × IV. Cyan top-decile contour marks where IBKR's convex payoff diverges most strongly from HIP-3's linear payoff.
 
 ---
 
@@ -162,7 +162,7 @@ Live discovery: 8 deployers × 170 listings → 72 with ≥30 days of candles �
 #### By category (mean alpha)
 
 | Category | n | Mean α | Pos / n |
-|----------|---|--------|---------|
+|----------|---|--------|--------|
 | **pre_ipo** (SPACEX, OPENAI, ANTHROPIC) | 3 | **+53.3%** | 2/3 |
 | **commodity** (GOLD, SILVER, OIL, COPPER, NATGAS, PLATINUM, …) | 8 | **+53.0%** | **8/8** |
 | **thematic** (MAG7, INFOTECH, NUCLEAR, DEFENSE, ENERGY, BIOTECH, ROBOT) | 7 | **+42.1%** | **7/7** |
@@ -288,6 +288,23 @@ The engine exploits the fact that HIP-3 perps have **linear payoff** (no Greeks)
 | 6 | **Color Trade** | Color (∂Γ/∂t) | Short near-expiry straddle IBKR | Gamma collapse near expiry |
 | 7 | **Zomma Trade** | Zomma (∂Γ/∂σ) | Long strangle IBKR + hedge HIP-3 | Vol spikes change gamma profile |
 
+### 7-Strategy Greek Surfaces (Animated 3D)
+
+One 3D surface per strategy, computed from real Black-Scholes Greeks (`bs_greeks`) across spot/strike × IV. The cyan contour on each panel marks the **top-decile arbitrage zone** — the region where IBKR's convex payoff diverges most strongly from HIP-3's linear payoff. The animation cycles the time-to-expiry between 10 and 120 days so you can watch how charm, color, and speed surfaces evolve as expiry approaches:
+
+![7 Greek Strategies 3D](docs/img/hip3_greeks_strategies_3d.gif)
+
+**Eight panels (50 frames, fixed camera):**
+- **Gamma Scalping** — peaks at ATM, narrow ridge → trade large straddles when DTE is short
+- **Vanna Trade** — saddle-shape across moneyness/IV → strongest in skew-rich regimes
+- **Charm Trade** — explodes near expiry → short-dated delta-bleed harvest
+- **Vomma Trade** — wings light up at high IV → OTM convexity edge
+- **Speed Trade** — third-order ridge near ATM → butterflies in stable spot regimes
+- **Color Trade** — gamma decay surface → short near-expiry straddles
+- **Zomma Trade** — gamma sensitivity to vol spikes → long strangles before vol events
+
+> All seven Greeks are **structurally zero on HIP-3** (linear perp payoff) but **fully priced on IBKR** (convex option payoff). Every cyan contour zone in the GIF is a region where that gap — and therefore the arbitrage P&L — is at its top decile.
+
 ---
 
 ## Architecture
@@ -309,6 +326,7 @@ scripts/
 ├── hip3_rolling_backtest.py        # Rolling expanding-window ARIMA-GARCH backtest
 ├── generate_hip3_visualizations.py # 5 animated GIFs + 2 static PNGs
 ├── generate_arbitrage_surfaces.py  # 4-panel 3D arbitrage strategy surfaces (animated)
+├── generate_greeks_strategies_surfaces.py # 7-panel 3D Greek strategy surfaces (animated)
 └── run_all.py                      # Pipeline runner
 data/
 ├── all_hip3/candles/{ASSET}.csv    # ★ Real daily OHLCV for ALL 72 HIP-3 assets (from launch)
@@ -328,6 +346,7 @@ docs/img/
 ├── hip3_greeks_surface_3d.gif      # ★ Animated 3D Greeks surfaces (60 frames)
 ├── hip3_equity_curves.gif          # ★ Animated equity curves, top 6 assets (60 frames)
 ├── hip3_arbitrage_strategies_3d.gif # ★ Animated 4-panel arbitrage surfaces (60 frames)
+├── hip3_greeks_strategies_3d.gif   # ★ Animated 7-panel Greek strategy surfaces (50 frames)
 ├── hip3_regime_dashboard.gif       # ★ Animated regime dashboard (50 frames)
 ├── hip3_all_premium_summary.png    # ★ 52-market premium summary
 ├── hip3_all_premium_equity_curves.png  # ★ Top 24 equity curves (all markets)
@@ -391,7 +410,7 @@ docs/img/
 ## Regime-Strategy Mapping
 
 | Regime | Base Position | Spread Width | Size Mult | MM Action |
-|--------|--------------|-------------|-----------|-----------|
+|--------|--------------|-------------|-----------|----------|
 | **BULL** | 110% (slight lever) | Tight (0.8x) | 1.2x | Max fills, tight spreads |
 | **NORMAL** | 100% | Normal (1.0x) | 1.0x | Standard market-making |
 | **CAUTIOUS** | 70% (trimmed) | Wide (2.0x) | 0.5x | Wider spreads, smaller size |
@@ -511,7 +530,8 @@ python3 scripts/run_hip3_premium.py               # Premium backtest on original
 
 # Generate animated visualizations (5 GIFs + 2 PNGs)
 python3 scripts/generate_hip3_visualizations.py
-python3 scripts/generate_arbitrage_surfaces.py     # 4-panel 3D arbitrage strategy surfaces (animated)
+python3 scripts/generate_arbitrage_surfaces.py            # 4-panel 3D arbitrage strategy surfaces
+python3 scripts/generate_greeks_strategies_surfaces.py    # 7-panel 3D Greek strategy surfaces
 ```
 
 > Option A is the full pipeline: discovers all active HIP-3 markets via the live `perpDexs` API, fetches real CBOE/OPRA option chains, and runs the 10-method premium backtest. Option B focuses on the original 16 assets with deeper per-asset analysis.
