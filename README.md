@@ -35,7 +35,7 @@ HIP-3 perp markets on Hyperliquid price volatility **differently** than traditio
 
 Fixed-camera 3D surfaces — the **camera doesn't move**, only the underlying signal evolves as the IV regime cycles low → high → low. Each panel highlights its **arbitrage zone** with a cyan/red/blue threshold contour and an explicit BUY / SELL annotation showing how to trade the edge:
 
-![Arbitrage Strategies 3D](docs/img/hip3_arbitrage_strategies_3d.svg)
+![Arbitrage Strategies 3D](docs/img/hip3_arbitrage_strategies_3d.gif)
 
 **Four panels (60 frames, dark terminal aesthetic, diverging colormap):**
 - **Vol Spread**: HIP3 − IBKR IV difference across moneyness × DTE. Red zone = SELL VOL HIP-3, blue zone = BUY VOL HIP-3. The "ARB ZONE %" caption reports how much of the surface exceeds the 5 vol-pt threshold.
@@ -292,7 +292,7 @@ The engine exploits the fact that HIP-3 perps have **linear payoff** (no Greeks)
 
 One 3D surface per strategy, computed from real Black-Scholes Greeks (`bs_greeks`) across spot/strike × IV. The cyan contour on each panel marks the **top-decile arbitrage zone** — the region where IBKR's convex payoff diverges most strongly from HIP-3's linear payoff. The animation cycles the time-to-expiry between 10 and 120 days so you can watch how charm, color, and speed surfaces evolve as expiry approaches:
 
-![7 Greek Strategies 3D](docs/img/hip3_greeks_strategies_3d.svg)
+![7 Greek Strategies 3D](docs/img/hip3_greeks_strategies_3d.gif)
 
 **Eight panels (50 frames, fixed camera):**
 - **Gamma Scalping** — peaks at ATM, narrow ridge → trade large straddles when DTE is short
@@ -345,8 +345,8 @@ docs/img/
 ├── hip3_iv_surface_3d.gif          # ★ Animated 3D IV surface comparison (60 frames)
 ├── hip3_greeks_surface_3d.gif      # ★ Animated 3D Greeks surfaces (60 frames)
 ├── hip3_equity_curves.gif          # ★ Animated equity curves, top 6 assets (60 frames)
-├── hip3_arbitrage_strategies_3d.svg # ★ 4-panel arbitrage strategy surfaces
-├── hip3_greeks_strategies_3d.svg   # ★ 7-panel Greek strategy surfaces
+├── hip3_arbitrage_strategies_3d.gif # ★ Animated 4-panel arbitrage strategy surfaces (60 frames)
+├── hip3_greeks_strategies_3d.gif   # ★ Animated 7-panel Greek strategy surfaces (50 frames)
 ├── hip3_regime_dashboard.gif       # ★ Animated regime dashboard (50 frames)
 ├── hip3_all_premium_summary.png    # ★ 52-market premium summary
 ├── hip3_all_premium_equity_curves.png  # ★ Top 24 equity curves (all markets)

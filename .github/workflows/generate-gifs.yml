@@ -1,0 +1,41 @@
+name: Generate GIF Visualizations
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'claude/market-making-bot-integration-eMRzh'
+    paths:
+      - 'scripts/generate_arbitrage_surfaces.py'
+      - 'scripts/generate_greeks_strategies_surfaces.py'
+      - '.github/workflows/generate-gifs.yml'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate Arbitrage Surfaces GIF
+        run: python scripts/generate_arbitrage_surfaces.py
+
+      - name: Generate Greek Strategies GIF
+        run: python scripts/generate_greeks_strategies_surfaces.py
+
+      - name: Commit GIFs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/img/hip3_arbitrage_strategies_3d.gif docs/img/hip3_greeks_strategies_3d.gif
+          git diff --staged --quiet || git commit -m "feat: auto-generate animated 3D GIF visualizations"
+          git push
