@@ -6,6 +6,7 @@ on:
     paths:
       - 'docs/img/*.b64*'
       - 'scripts/decode_gifs.py'
+      - 'scripts/generate_arbitrage_setups.py'
       - '.github/workflows/generate-gifs.yml'
 jobs:
   decode:
@@ -31,11 +32,17 @@ jobs:
             echo "Greeks GIF missing, generating from scratch..."
             python scripts/generate_greeks_strategies_surfaces.py
           fi
-      - name: Commit decoded/generated GIFs
+      - name: Generate arbitrage setups PNG (4-panel trade setup viz)
+        run: |
+          if [ ! -f docs/img/hip3_arbitrage_setups_3d.png ]; then
+            echo "Arbitrage setups PNG missing, generating..."
+            python scripts/generate_arbitrage_setups.py
+          fi
+      - name: Commit decoded/generated assets
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/img/*.gif
+          git add docs/img/*.gif docs/img/hip3_arbitrage_setups_3d.png
           git rm -f docs/img/*.b64* 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "feat: decode animated 3D GIF visualizations from base64 chunks"
+          git diff --staged --quiet || git commit -m "feat: decode/generate visualizations (GIFs + arbitrage setups PNG)"
           git push
