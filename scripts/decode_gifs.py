@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""Decode base64-encoded GIF files (supports chunked .b64.partN files)."""
-import base64, glob
+"""Decode base64-encoded GIF files (supports chunked .b64.partN files).
+
+Run: python scripts/decode_gifs.py
+Reads docs/img/*.gif.b64.part* chunks, concatenates, base64-decodes to binary GIF.
+"""
+import base64
 from pathlib import Path
 
 IMG_DIR = Path(__file__).resolve().parent.parent / 'docs' / 'img'
 
-for name in ['hip3_arbitrage_strategies_3d', 'hip3_greeks_strategies_3d']:
+TARGETS = ['hip3_arbitrage_strategies_3d', 'hip3_greeks_strategies_3d']
+
+for name in TARGETS:
     gif_file = IMG_DIR / f'{name}.gif'
-    
+
     # Check for chunked files
     parts = sorted(IMG_DIR.glob(f'{name}.gif.b64.part*'))
     if parts:
@@ -28,3 +34,5 @@ for name in ['hip3_arbitrage_strategies_3d', 'hip3_greeks_strategies_3d']:
         print(f'{gif_file.name} already exists ({gif_file.stat().st_size:,} bytes)')
     else:
         print(f'WARNING: no data for {name}')
+
+print('Done.')
