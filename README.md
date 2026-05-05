@@ -45,6 +45,27 @@ Fixed-camera 3D surfaces — the **camera doesn't move**, only the underlying si
 
 ---
 
+### 4 Canonical Arbitrage Setups — Trade Construction Guide
+
+A static 4-panel reference showing **how to identify and trade** each arbitrage setup from the 3D surface. Each panel uses synthetic data calibrated to realistic regimes; colored markers pinpoint the entry zone, and the right-side annotation box lays out the exact trade construction (BUY/SELL legs, hedge, edge):
+
+![4 Arbitrage Setups 3D](docs/img/hip3_arbitrage_setups_3d.png)
+
+**How to read each panel:**
+
+| # | Setup | Surface signal (what to look for) | Entry trade | Hedge leg | Source of edge |
+|---|-------|-----------------------------------|-------------|-----------|----------------|
+| ① | **Vol Spread Arb** | Red zone where (HIP3_IV − IBKR_IV) > +5 vp — HIP-3 overprices vol | **SELL** HIP-3 perp + **BUY** IBKR ATM straddle | delta-neutral via the perp leg | spread × vega ≈ +$45/contract |
+| ② | **Calendar Spread** | Steepest contango point on the (Back − Front) IV surface | **BUY** IBKR back-month ATM + **SELL** front-month ATM | HIP-3 perp absorbs net Δ | term-structure mean reversion |
+| ③ | **Risk Reversal** | Bottom-of-surface zone (25Δ put − call IV) < −12 vp — wide put skew | **SELL** IBKR 25Δ put + **BUY** IBKR 25Δ call | short HIP-3 perp covers downside Δ | skew normalises as vol mean-reverts |
+| ④ | **Gamma Scalp** | ATM peak on Γ + \|Vanna\| + \|Vomma\| surface (short DTE, low IV) | **BUY** IBKR ATM straddle (long Γ + vega) | dynamically Δ-hedge via HIP-3 perp | realised vol > implied → scalp Γ — and HIP-3 has Γ = 0 |
+
+> **Reading the surface:** The colored marker on each panel is the *current best entry point* — peak red/orange = SELL signal, peak blue/green = BUY signal. The threshold contour at the floor shows the boundary of the arb zone (only enter when the signal exceeds this). The HIP-3 leg is **always** a perp position (linear payoff, zero Greeks), while the IBKR leg uses options to capture the convexity, term-structure or skew edge that HIP-3 cannot price. All four setups are venue-arbitrages of the same underlying.
+
+> Generation: `python3 scripts/generate_arbitrage_setups.py` → `docs/img/hip3_arbitrage_setups_3d.png`
+
+---
+
 ## Live Trading Dashboard (Animated)
 
 The animated dashboard shows the SPY backtest running live: equity curves building up, regime-colored price chart, ARIMA(2,1,2) forecast signal, EWMA conditional volatility, position sizing, and drawdown — all updating frame-by-frame.
@@ -327,6 +348,7 @@ scripts/
 ├── generate_hip3_visualizations.py # 5 animated GIFs + 2 static PNGs
 ├── generate_arbitrage_surfaces.py  # 4-panel 3D arbitrage strategy surfaces (animated)
 ├── generate_greeks_strategies_surfaces.py # 7-panel 3D Greek strategy surfaces (animated)
+├── generate_arbitrage_setups.py    # ★ 4-panel trade-setup guide PNG (entry signals + trade construction)
 └── run_all.py                      # Pipeline runner
 data/
 ├── all_hip3/candles/{ASSET}.csv    # ★ Real daily OHLCV for ALL 72 HIP-3 assets (from launch)
@@ -353,6 +375,7 @@ docs/img/
 ├── hip3_real_premium_summary.png   # 16-asset premium summary
 ├── hip3_real_premium_equity_curves.png # 16-asset premium equity curves
 ├── hip3_arbitrage_summary.svg      # Alpha & strategy summary
+├── hip3_arbitrage_setups_3d.png    # ★ 4-panel trade-setup guide (vol spread / calendar / skew / gamma)
 └── hip3_vol_spread_heatmap.png     # Vol spread heatmap across assets/time
 ```
 
@@ -532,6 +555,7 @@ python3 scripts/run_hip3_premium.py               # Premium backtest on original
 python3 scripts/generate_hip3_visualizations.py
 python3 scripts/generate_arbitrage_surfaces.py            # 4-panel 3D arbitrage strategy surfaces
 python3 scripts/generate_greeks_strategies_surfaces.py    # 7-panel 3D Greek strategy surfaces
+python3 scripts/generate_arbitrage_setups.py              # 4-panel trade-setup guide (PNG)
 ```
 
 > Option A is the full pipeline: discovers all active HIP-3 markets via the live `perpDexs` API, fetches real CBOE/OPRA option chains, and runs the 10-method premium backtest. Option B focuses on the original 16 assets with deeper per-asset analysis.
