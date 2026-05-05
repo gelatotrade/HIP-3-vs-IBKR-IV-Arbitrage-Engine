@@ -45,24 +45,45 @@ Fixed-camera 3D surfaces — the **camera doesn't move**, only the underlying si
 
 ---
 
-### 4 Canonical Arbitrage Setups — Trade Construction Guide
+### 4 Canonical Arbitrage Setups — Animated Trade Construction Guides
 
-A static 4-panel reference showing **how to identify and trade** each arbitrage setup from the 3D surface. Each panel uses synthetic data calibrated to realistic regimes; colored markers pinpoint the entry zone, and the right-side annotation box lays out the exact trade construction (BUY/SELL legs, hedge, edge):
+Four **separate animated 3D GIFs**, one per arbitrage setup. Each GIF cycles its underlying regime (HIP-3 IV, term-structure slope, skew intensity, or DTE) so you can watch the entry zone (colored marker) light up and fade as the signal strengthens or normalises. The right-side panel of each GIF shows the exact trade construction (BUY/SELL legs, hedge, edge) plus a live status line.
 
-![4 Arbitrage Setups 3D](docs/img/hip3_arbitrage_setups_3d.png)
+#### ① Vol Spread Arb — HIP-3 IV cycles low → high → low
 
-**How to read each panel:**
+**Signal:** Red surface zone where (HIP3_IV − IBKR_IV) exceeds +5 vol points. As the HIP-3 funding-implied IV cycles up, the red dome grows over OTM puts at short DTE — that's where the perp is most overpricing vol.
 
-| # | Setup | Surface signal (what to look for) | Entry trade | Hedge leg | Source of edge |
-|---|-------|-----------------------------------|-------------|-----------|----------------|
-| ① | **Vol Spread Arb** | Red zone where (HIP3_IV − IBKR_IV) > +5 vp — HIP-3 overprices vol | **SELL** HIP-3 perp + **BUY** IBKR ATM straddle | delta-neutral via the perp leg | spread × vega ≈ +$45/contract |
-| ② | **Calendar Spread** | Steepest contango point on the (Back − Front) IV surface | **BUY** IBKR back-month ATM + **SELL** front-month ATM | HIP-3 perp absorbs net Δ | term-structure mean reversion |
-| ③ | **Risk Reversal** | Bottom-of-surface zone (25Δ put − call IV) < −12 vp — wide put skew | **SELL** IBKR 25Δ put + **BUY** IBKR 25Δ call | short HIP-3 perp covers downside Δ | skew normalises as vol mean-reverts |
-| ④ | **Gamma Scalp** | ATM peak on Γ + \|Vanna\| + \|Vomma\| surface (short DTE, low IV) | **BUY** IBKR ATM straddle (long Γ + vega) | dynamically Δ-hedge via HIP-3 perp | realised vol > implied → scalp Γ — and HIP-3 has Γ = 0 |
+![Vol Spread Arb Animated](docs/img/hip3_arbitrage_setup1_vol_spread.gif)
 
-> **Reading the surface:** The colored marker on each panel is the *current best entry point* — peak red/orange = SELL signal, peak blue/green = BUY signal. The threshold contour at the floor shows the boundary of the arb zone (only enter when the signal exceeds this). The HIP-3 leg is **always** a perp position (linear payoff, zero Greeks), while the IBKR leg uses options to capture the convexity, term-structure or skew edge that HIP-3 cannot price. All four setups are venue-arbitrages of the same underlying.
+> **Trade:** **SELL** HIP-3 perp + **BUY** IBKR ATM straddle. The perp leg makes the position delta-neutral. **Edge:** spread × vega ≈ +$45 per contract when the gap is ≥ 5 vp. **Why it exists:** HIP-3 IV is funding-implied (one number for the whole surface), IBKR IV is options-implied (a full surface). When they diverge, fade the gap.
 
-> Generation: `python3 scripts/generate_arbitrage_setups.py` → `docs/img/hip3_arbitrage_setups_3d.png`
+#### ② Calendar Spread — Term-structure slope cycles flat → steep contango → flat
+
+**Signal:** Gold ▲ marker climbs as the (Back − Front) IV slope steepens. HIP-3 contributes nothing here (orange reference plane at 0 — single funding rate = flat term). The taller the surface above the orange plane, the bigger the calendar edge.
+
+![Calendar Spread Animated](docs/img/hip3_arbitrage_setup2_calendar_spread.gif)
+
+> **Trade:** **BUY** IBKR back-month ATM + **SELL** IBKR front-month ATM. **Hedge:** HIP-3 perp absorbs any net delta. **Edge:** term-structure mean reversion — when contango is extreme, the back leg richens relative to the front. **Why it exists:** HIP-3 has a single funding rate (flat term structure); IBKR options price each expiry separately.
+
+#### ③ Risk Reversal — Skew intensity cycles calm → crisis → calm
+
+**Signal:** Orange ◆ marker drops as 25Δ put−call skew widens (becomes more negative). The cyan top-decile contour shows where the put skew is statistically extreme. The deeper the bowl, the cleaner the risk-reversal trade.
+
+![Risk Reversal Animated](docs/img/hip3_arbitrage_setup3_risk_reversal.gif)
+
+> **Trade:** **SELL** IBKR 25Δ put + **BUY** IBKR 25Δ call. **Hedge:** short HIP-3 perp covers downside delta. **Edge:** skew normalises as vol mean-reverts. **Why it exists:** HIP-3 prices puts and calls symmetrically (no crash-fear premium); IBKR options carry persistent put skew — fade it when extreme.
+
+#### ④ Gamma Scalp — DTE cycles 90 → 7 → 90 days
+
+**Signal:** Green ★ marker peaks at ATM as DTE shrinks — that's gamma exploding near expiry. The cyan contour marks the top-decile convexity zone. HIP-3 contributes **zero gamma** (linear perp payoff), so the entire surface is pure arbitrage P&L.
+
+![Gamma Scalp Animated](docs/img/hip3_arbitrage_setup4_gamma_scalp.gif)
+
+> **Trade:** **BUY** IBKR ATM straddle (long Γ + vega). **Hedge:** dynamically Δ-hedge via HIP-3 perp. **Edge:** when realised vol > implied, you scalp gamma profitably; the perp leg neutralises directional risk for free (no convexity cost). **Why it exists:** HIP-3 has Γ = 0; IBKR options accumulate gamma near expiry — buy them and hedge linearly.
+
+> **Reading any GIF:** The colored marker (red/orange/blue/green/gold) is the *current best entry point*. The threshold contour at the floor shows the boundary of the arb zone (only enter when the signal exceeds this). The HIP-3 leg is **always** a perp position (linear payoff, zero Greeks); the IBKR leg uses options to capture convexity / term / skew / vol edges that HIP-3 cannot price. All four setups are venue-arbitrages of the same underlying.
+
+> Generation: `python3 scripts/generate_arbitrage_setups_animated.py` → 4 GIFs in `docs/img/`. A static 4-panel overview (`hip3_arbitrage_setups_3d.png`) is also produced by `scripts/generate_arbitrage_setups.py`.
 
 ---
 
@@ -348,7 +369,8 @@ scripts/
 ├── generate_hip3_visualizations.py # 5 animated GIFs + 2 static PNGs
 ├── generate_arbitrage_surfaces.py  # 4-panel 3D arbitrage strategy surfaces (animated)
 ├── generate_greeks_strategies_surfaces.py # 7-panel 3D Greek strategy surfaces (animated)
-├── generate_arbitrage_setups.py    # ★ 4-panel trade-setup guide PNG (entry signals + trade construction)
+├── generate_arbitrage_setups.py    # ★ 4-panel trade-setup guide PNG (static overview)
+├── generate_arbitrage_setups_animated.py # ★ 4 separate animated GIFs, one per setup (regime cycling)
 └── run_all.py                      # Pipeline runner
 data/
 ├── all_hip3/candles/{ASSET}.csv    # ★ Real daily OHLCV for ALL 72 HIP-3 assets (from launch)
@@ -375,7 +397,11 @@ docs/img/
 ├── hip3_real_premium_summary.png   # 16-asset premium summary
 ├── hip3_real_premium_equity_curves.png # 16-asset premium equity curves
 ├── hip3_arbitrage_summary.svg      # Alpha & strategy summary
-├── hip3_arbitrage_setups_3d.png    # ★ 4-panel trade-setup guide (vol spread / calendar / skew / gamma)
+├── hip3_arbitrage_setups_3d.png    # ★ 4-panel trade-setup guide (static overview)
+├── hip3_arbitrage_setup1_vol_spread.gif       # ★ Animated: HIP-3 IV regime cycling
+├── hip3_arbitrage_setup2_calendar_spread.gif  # ★ Animated: term-structure slope cycling
+├── hip3_arbitrage_setup3_risk_reversal.gif    # ★ Animated: skew intensity cycling
+├── hip3_arbitrage_setup4_gamma_scalp.gif      # ★ Animated: DTE 90→7→90 days
 └── hip3_vol_spread_heatmap.png     # Vol spread heatmap across assets/time
 ```
 
@@ -555,7 +581,8 @@ python3 scripts/run_hip3_premium.py               # Premium backtest on original
 python3 scripts/generate_hip3_visualizations.py
 python3 scripts/generate_arbitrage_surfaces.py            # 4-panel 3D arbitrage strategy surfaces
 python3 scripts/generate_greeks_strategies_surfaces.py    # 7-panel 3D Greek strategy surfaces
-python3 scripts/generate_arbitrage_setups.py              # 4-panel trade-setup guide (PNG)
+python3 scripts/generate_arbitrage_setups.py              # 4-panel trade-setup guide (static PNG)
+python3 scripts/generate_arbitrage_setups_animated.py     # 4 separate animated GIFs, one per setup
 ```
 
 > Option A is the full pipeline: discovers all active HIP-3 markets via the live `perpDexs` API, fetches real CBOE/OPRA option chains, and runs the 10-method premium backtest. Option B focuses on the original 16 assets with deeper per-asset analysis.
