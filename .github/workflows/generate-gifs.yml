@@ -7,6 +7,7 @@ on:
       - 'docs/img/*.b64*'
       - 'scripts/decode_gifs.py'
       - 'scripts/generate_arbitrage_setups.py'
+      - 'scripts/generate_arbitrage_setups_animated.py'
       - '.github/workflows/generate-gifs.yml'
 jobs:
   decode:
@@ -38,11 +39,23 @@ jobs:
             echo "Arbitrage setups PNG missing, generating..."
             python scripts/generate_arbitrage_setups.py
           fi
+      - name: Generate 4 separate animated arbitrage-setup GIFs
+        run: |
+          MISSING=0
+          for f in setup1_vol_spread setup2_calendar_spread setup3_risk_reversal setup4_gamma_scalp; do
+            if [ ! -f "docs/img/hip3_arbitrage_${f}.gif" ]; then
+              MISSING=1
+            fi
+          done
+          if [ "$MISSING" = "1" ]; then
+            echo "One or more animated setup GIFs missing, generating all 4..."
+            python scripts/generate_arbitrage_setups_animated.py
+          fi
       - name: Commit decoded/generated assets
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/img/*.gif docs/img/hip3_arbitrage_setups_3d.png
           git rm -f docs/img/*.b64* 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "feat: decode/generate visualizations (GIFs + arbitrage setups PNG)"
+          git diff --staged --quiet || git commit -m "feat: decode/generate visualizations (GIFs + arbitrage setups)"
           git push
