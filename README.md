@@ -371,6 +371,7 @@ scripts/
 ├── generate_greeks_strategies_surfaces.py # 7-panel 3D Greek strategy surfaces (animated)
 ├── generate_arbitrage_setups.py    # ★ 4-panel trade-setup guide PNG (static overview)
 ├── generate_arbitrage_setups_animated.py # ★ 4 separate animated GIFs, one per setup (regime cycling)
+├── decode_gifs.py                  # Decode base64-encoded GIF chunks (CI helper)
 └── run_all.py                      # Pipeline runner
 data/
 ├── all_hip3/candles/{ASSET}.csv    # ★ Real daily OHLCV for ALL 72 HIP-3 assets (from launch)
