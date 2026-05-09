@@ -1,0 +1,7 @@
+target/
+Cargo.lock.bak
+*.ring
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

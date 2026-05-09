@@ -601,6 +601,70 @@ python3 scripts/generate_arbitrage_setups_animated.py     # 4 separate animated 
 
 ---
 
+## Live Execution Engine (Rust)
+
+The repo ships with a **production-architecture Rust trade engine** in `rust/` for live execution of the strategies backtested above. Python produces signals, Rust executes them on Hyperliquid HIP-3.
+
+```
+Python research stack          Rust trade-bot
+(ARIMA + Greeks + IV arb)      (live execution)
+        │                              │
+        │   bincode-encoded Signal     │
+        ▼                              │
+┌─────────────────────┐                │
+│ Shared-memory ring  │ ◄── ~1µs ──────│
+│ /tmp/hip3_signals   │  lock-free SPSC│
+│ 4 MB, 16K slots     │                │
+└─────────────────────┘                ▼
+                              ┌──────────────────┐
+                              │  Risk + Sign     │
+                              │  + Hyperliquid   │
+                              └──────────────────┘
+```
+
+**Stack:** 8 crates + 1 binary, ~2k lines of Rust.
+
+| Crate | Role |
+|-------|------|
+| `hyperliquid-client` | REST + auto-reconnecting WebSocket, EIP-712 typed-data signing (secp256k1 ECDSA) |
+| `signal-bridge` | Lock-free SPSC shared-memory ring buffer (sub-µs Python → Rust transport) |
+| `orderbook` | L2 book state via `arc-swap` (lock-free reads) |
+| `risk` | Pre-trade checks, daily-loss kill switch, rate limiter, notional caps |
+| `execution` | Order lifecycle, fill application, realised/unrealised PnL |
+| `persistence` | SQLite trade log (WAL mode) — orders, fills, signals, PnL snapshots |
+| `metrics` | Prometheus counters/gauges/histograms on `:9091/metrics` |
+| `bin/trade-bot` | Main async binary (tokio) |
+
+**Quick start:**
+
+```bash
+cd rust/
+cargo build --release --bin trade-bot
+
+# Dry-run (no orders sent)
+./target/release/trade-bot --testnet --dry-run --symbols AAPL,NVDA
+
+# Live testnet
+export HYPERLIQUID_PRIVATE_KEY=0x...
+./target/release/trade-bot --testnet --symbols AAPL,NVDA
+```
+
+**Python → Rust signal:**
+
+```python
+from rust.python_bridge.signal_writer import SignalRingWriter, Signal, KIND_VOL_SPREAD, now_ns
+writer = SignalRingWriter("/tmp/hip3_signals.ring")
+writer.push(Signal(seq=42, kind=KIND_VOL_SPREAD, symbol="AAPL", side="buy",
+                   size="1.5", limit_price="195.50", edge_bps=35, confidence=0.82,
+                   ttl_ms=250, timestamp_ns=now_ns()))
+```
+
+**Tests:** 18 Rust tests pass — Black-Scholes-free unit tests covering signing, position math (open/close/flip/average-in), risk rejection paths, ring-buffer round-trips, SQLite persistence.
+
+See `rust/README.md` for the full architecture, performance characteristics, and production checklist.
+
+---
+
 ## License
 
 MIT

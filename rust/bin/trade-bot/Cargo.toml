@@ -1,0 +1,33 @@
+[package]
+name = "trade-bot"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "trade-bot"
+path = "src/main.rs"
+
+[dependencies]
+common = { path = "../../crates/common" }
+hyperliquid-client = { path = "../../crates/hyperliquid-client" }
+orderbook = { path = "../../crates/orderbook" }
+execution = { path = "../../crates/execution" }
+risk = { path = "../../crates/risk" }
+signal-bridge = { path = "../../crates/signal-bridge" }
+persistence = { path = "../../crates/persistence" }
+metrics = { path = "../../crates/metrics" }
+
+tokio.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+config.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+rust_decimal_macros.workspace = true
+parking_lot.workspace = true

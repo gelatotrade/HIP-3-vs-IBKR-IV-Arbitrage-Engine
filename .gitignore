@@ -10,3 +10,11 @@ build/
 .ruff_cache/
 .coverage
 htmlcov/
+
+# Rust
+rust/target/
+*.ring
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

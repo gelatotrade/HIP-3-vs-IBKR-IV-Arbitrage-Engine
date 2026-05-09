@@ -42,3 +42,34 @@ jobs:
 
       - name: Run tests
         run: pytest tests/ -v --tb=short
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Cargo fmt check
+        working-directory: rust
+        run: cargo fmt --all -- --check
+
+      - name: Cargo clippy
+        working-directory: rust
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Cargo test
+        working-directory: rust
+        run: cargo test --workspace --no-fail-fast
+
+      - name: Release build
+        working-directory: rust
+        run: cargo build --release --bin trade-bot
