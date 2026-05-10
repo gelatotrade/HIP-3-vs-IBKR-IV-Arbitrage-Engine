@@ -1,8 +1,7 @@
 """Tests for Black-Scholes pricing and Greeks."""
 
 import numpy as np
-import pytest
-from ibkr_options_client import bs_price, bs_greeks, implied_vol, OptionQuote
+from ibkr_options_client import OptionQuote, bs_greeks, bs_price, implied_vol
 
 
 class TestBSPrice:

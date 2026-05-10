@@ -1,6 +1,6 @@
-.PHONY: all install dev test lint format typecheck fetch backtest viz clean docker-build docker-run
+.PHONY: all install dev test lint format typecheck rust-test rust-lint rust-build fetch backtest viz clean docker-build docker-run
 
-all: install test lint
+all: install test lint rust-test rust-lint
 
 install:
 	pip install -r requirements.txt
@@ -12,13 +12,22 @@ test:
 	pytest tests/ -v
 
 lint:
-	ruff check scripts/ tests/
+	ruff check tests/
 
 format:
-	ruff format scripts/ tests/
+	ruff format tests/
 
 typecheck:
 	mypy scripts/ --ignore-missing-imports
+
+rust-test:
+	cd rust && cargo test --workspace
+
+rust-lint:
+	cd rust && cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings
+
+rust-build:
+	cd rust && cargo build --release --bin trade-bot
 
 fetch:
 	python3 scripts/fetch_all_hip3.py

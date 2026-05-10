@@ -1,6 +1,5 @@
 """Tests for IBKROptionsClient chain generation and IV surface."""
 
-import numpy as np
 import pandas as pd
 import pytest
 from ibkr_options_client import IBKROptionsClient
@@ -29,9 +28,7 @@ class TestOptionsChain:
         assert len(calls) == len(puts)
 
     def test_chain_custom_expiries(self, client):
-        chain = client.generate_options_chain(
-            spot=100, base_iv=0.25, expiries_days=[7, 30, 90]
-        )
+        chain = client.generate_options_chain(spot=100, base_iv=0.25, expiries_days=[7, 30, 90])
         unique_expiries = chain["expiry_days"].nunique()
         assert unique_expiries == 3
 
@@ -40,12 +37,8 @@ class TestOptionsChain:
         assert (chain["mid"] >= 0).all()
 
     def test_chain_with_skew(self, client):
-        chain_no_skew = client.generate_options_chain(
-            spot=100, base_iv=0.25, iv_skew=0.0
-        )
-        chain_skew = client.generate_options_chain(
-            spot=100, base_iv=0.25, iv_skew=-0.15
-        )
+        chain_no_skew = client.generate_options_chain(spot=100, base_iv=0.25, iv_skew=0.0)
+        chain_skew = client.generate_options_chain(spot=100, base_iv=0.25, iv_skew=-0.15)
         assert len(chain_skew) == len(chain_no_skew)
 
 

@@ -2,11 +2,10 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 from hyperliquid_hip3_client import (
+    HIP3_LAUNCH_DATES,
     generate_synthetic_hip3_data,
     get_asset_n_days,
-    HIP3_LAUNCH_DATES,
 )
 
 
