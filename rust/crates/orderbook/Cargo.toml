@@ -1,0 +1,13 @@
+[package]
+name = "orderbook"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+common = { path = "../common" }
+
+rust_decimal.workspace = true
+parking_lot.workspace = true
+arc-swap.workspace = true
+tracing.workspace = true

@@ -1,0 +1,87 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/common",
+    "crates/hyperliquid-client",
+    "crates/orderbook",
+    "crates/execution",
+    "crates/risk",
+    "crates/signal-bridge",
+    "crates/persistence",
+    "crates/metrics",
+    "bin/trade-bot",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["gelatotrade"]
+rust-version = "1.75"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+
+# HTTP
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+url = "2.5"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+hex = "0.4"
+
+# Crypto (Ed25519/secp256k1 EIP-712 signing for Hyperliquid)
+secp256k1 = { version = "0.29", features = ["recovery", "global-context"] }
+sha3 = "0.10"
+sha2 = "0.10"
+
+# Concurrency primitives
+crossbeam-queue = "0.3"
+parking_lot = "0.12"
+arc-swap = "1.7"
+
+# Shared memory
+memmap2 = "0.9"
+
+# Errors
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging / metrics
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+prometheus = "0.13"
+
+# Storage
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Numeric
+rust_decimal = { version = "1.35", features = ["serde-str"] }
+rust_decimal_macros = "1.35"
+
+# CLI
+clap = { version = "4.5", features = ["derive", "env"] }
+
+# Config
+config = { version = "0.14", default-features = false, features = ["toml"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+debug = false
+panic = "abort"
+strip = true
+
+[profile.bench]
+opt-level = 3
+lto = "thin"
+debug = true

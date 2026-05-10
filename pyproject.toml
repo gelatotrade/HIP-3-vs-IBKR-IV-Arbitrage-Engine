@@ -1,0 +1,48 @@
+[project]
+name = "hip3-iv-arbitrage-engine"
+version = "1.0.0"
+description = "HIP-3 vs IBKR IV Arbitrage Engine"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scipy>=1.10",
+    "matplotlib>=3.7",
+    "Pillow>=9.5",
+    "requests>=2.28",
+    "yfinance>=0.2.18",
+    "statsmodels>=0.14",
+    "arch>=8.0",
+    "hmmlearn>=0.3",
+    "scikit-learn>=1.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["scripts"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+extend-exclude = ["scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,242 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+<rect width="1200" height="900" fill="#080810"/>
+<text x="600" y="35" text-anchor="middle" fill="#00ffcc" font-family="monospace" font-size="18" font-weight="bold">Alpha &amp; Strategy Summary — All 52 Active HIP-3 Markets</text>
+<text x="600" y="55" text-anchor="middle" fill="#667788" font-family="monospace" font-size="11">Purged K-Fold CV | Hansen SPA | Real CBOE/OPRA IV | Variable Funding</text>
+<rect x="60" y="70" width="525" height="370" fill="#0e0e1a" rx="4"/>
+<rect x="615" y="70" width="525" height="370" fill="#0e0e1a" rx="4"/>
+<rect x="60" y="470" width="525" height="370" fill="#0e0e1a" rx="4"/>
+<rect x="615" y="470" width="525" height="370" fill="#0e0e1a" rx="4"/>
+<text x="322" y="88" text-anchor="middle" fill="#cccccc" font-family="monospace" font-size="12" font-weight="bold">Out-of-Sample Alpha by Asset (Top 20)</text>
+<rect x="115" y="101.0" width="445" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="112" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">ANTHROPI</text>
+<text x="563" y="112" fill="#667788" font-family="monospace" font-size="7">+108.4%</text>
+<rect x="115" y="117.25" width="408" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="128" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">MU</text>
+<text x="526" y="128" fill="#667788" font-family="monospace" font-size="7">+99.3%</text>
+<rect x="115" y="133.5" width="380" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="145" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">INTC</text>
+<text x="498" y="145" fill="#667788" font-family="monospace" font-size="7">+92.5%</text>
+<rect x="115" y="149.75" width="329" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="161" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">BABA</text>
+<text x="447" y="161" fill="#667788" font-family="monospace" font-size="7">+80.2%</text>
+<rect x="115" y="166.0" width="310" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="177" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">COIN</text>
+<text x="428" y="177" fill="#667788" font-family="monospace" font-size="7">+75.6%</text>
+<rect x="115" y="182.25" width="310" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="193" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">ORCL</text>
+<text x="428" y="193" fill="#667788" font-family="monospace" font-size="7">+75.6%</text>
+<rect x="115" y="198.5" width="290" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="210" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">HOOD</text>
+<text x="408" y="210" fill="#667788" font-family="monospace" font-size="7">+70.5%</text>
+<rect x="115" y="214.75" width="286" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="226" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">OIL</text>
+<text x="404" y="226" fill="#667788" font-family="monospace" font-size="7">+69.7%</text>
+<rect x="115" y="231.0" width="281" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="242" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">CL</text>
+<text x="399" y="242" fill="#667788" font-family="monospace" font-size="7">+68.5%</text>
+<rect x="115" y="247.25" width="270" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="258" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">SILVER</text>
+<text x="388" y="258" fill="#667788" font-family="monospace" font-size="7">+65.7%</text>
+<rect x="115" y="263.5" width="269" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="275" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">SPACEX</text>
+<text x="387" y="275" fill="#667788" font-family="monospace" font-size="7">+65.4%</text>
+<rect x="115" y="279.75" width="250" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="291" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">PLATINUM</text>
+<text x="368" y="291" fill="#667788" font-family="monospace" font-size="7">+60.9%</text>
+<rect x="115" y="296.0" width="243" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="307" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">RIVN</text>
+<text x="361" y="307" fill="#667788" font-family="monospace" font-size="7">+59.3%</text>
+<rect x="115" y="312.25" width="239" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="323" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">NATGAS</text>
+<text x="357" y="323" fill="#667788" font-family="monospace" font-size="7">+58.1%</text>
+<rect x="115" y="328.5" width="226" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="340" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">URNM</text>
+<text x="344" y="340" fill="#667788" font-family="monospace" font-size="7">+55.0%</text>
+<rect x="115" y="344.75" width="213" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="356" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">DEFENSE</text>
+<text x="331" y="356" fill="#667788" font-family="monospace" font-size="7">+51.9%</text>
+<rect x="115" y="361.0" width="213" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="372" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">TSLA</text>
+<text x="331" y="372" fill="#667788" font-family="monospace" font-size="7">+51.8%</text>
+<rect x="115" y="377.25" width="207" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="388" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">MSTR</text>
+<text x="325" y="388" fill="#667788" font-family="monospace" font-size="7">+50.3%</text>
+<rect x="115" y="393.5" width="206" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="405" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">NUCLEAR</text>
+<text x="324" y="405" fill="#667788" font-family="monospace" font-size="7">+50.1%</text>
+<rect x="115" y="409.75" width="203" height="14" fill="#22cc88" opacity="0.7" rx="1"/>
+<text x="112" y="421" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">ENERGY</text>
+<text x="321" y="421" fill="#667788" font-family="monospace" font-size="7">+49.4%</text>
+<text x="322" y="435" text-anchor="middle" fill="#667788" font-family="monospace" font-size="9">46/52 positive alpha (88.5%) | Mean +38.3%</text>
+<text x="877" y="88" text-anchor="middle" fill="#cccccc" font-family="monospace" font-size="12" font-weight="bold">Sharpe Ratio: Strategy vs Benchmark</text>
+<rect x="670" y="101.0" width="425" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="111" width="167" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="114" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">USTECH</text>
+<text x="1098" y="110" fill="#00ffcc" font-family="monospace" font-size="7">5.28</text>
+<rect x="670" y="122.66666666666667" width="369" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="132" width="158" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="136" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">INFOTECH</text>
+<text x="1042" y="132" fill="#00ffcc" font-family="monospace" font-size="7">4.58</text>
+<rect x="670" y="144.33333333333334" width="347" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="154" width="179" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="157" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">USAR</text>
+<text x="1020" y="154" fill="#00ffcc" font-family="monospace" font-size="7">4.31</text>
+<rect x="670" y="166.0" width="326" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="176" width="199" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="179" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">ANTHROPI</text>
+<text x="999" y="175" fill="#00ffcc" font-family="monospace" font-size="7">4.06</text>
+<rect x="670" y="187.66666666666669" width="319" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="198" width="207" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="201" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">INTC</text>
+<text x="992" y="197" fill="#00ffcc" font-family="monospace" font-size="7">3.97</text>
+<rect x="670" y="209.33333333333334" width="304" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="219" width="245" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="222" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">CRWV</text>
+<text x="977" y="219" fill="#00ffcc" font-family="monospace" font-size="7">3.77</text>
+<rect x="670" y="231.0" width="284" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="241" width="37" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="244" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">MAG7</text>
+<text x="957" y="240" fill="#00ffcc" font-family="monospace" font-size="7">3.53</text>
+<rect x="670" y="252.66666666666669" width="271" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="262" width="177" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="266" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">SEMIS</text>
+<text x="944" y="262" fill="#00ffcc" font-family="monospace" font-size="7">3.37</text>
+<rect x="670" y="274.33333333333337" width="258" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="284" width="186" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="287" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">TSM</text>
+<text x="931" y="284" fill="#00ffcc" font-family="monospace" font-size="7">3.21</text>
+<rect x="670" y="296.0" width="254" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="306" width="130" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="309" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">BIOTECH</text>
+<text x="927" y="305" fill="#00ffcc" font-family="monospace" font-size="7">3.16</text>
+<rect x="670" y="317.6666666666667" width="250" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="328" width="136" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="330" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">GOOGL</text>
+<text x="923" y="327" fill="#00ffcc" font-family="monospace" font-size="7">3.11</text>
+<rect x="670" y="339.33333333333337" width="244" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="349" width="201" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="352" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">SNDK</text>
+<text x="917" y="349" fill="#00ffcc" font-family="monospace" font-size="7">3.04</text>
+<rect x="670" y="361.0" width="244" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="371" width="187" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="374" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">AMD</text>
+<text x="917" y="370" fill="#00ffcc" font-family="monospace" font-size="7">3.03</text>
+<rect x="670" y="382.6666666666667" width="242" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="392" width="91" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="396" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">US500</text>
+<text x="915" y="392" fill="#00ffcc" font-family="monospace" font-size="7">3.01</text>
+<rect x="670" y="404.33333333333337" width="241" height="10" fill="#00ffcc" opacity="0.7" rx="1"/>
+<rect x="670" y="414" width="89" height="10" fill="#667788" opacity="0.5" rx="1"/>
+<text x="667" y="417" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">MU</text>
+<text x="914" y="414" fill="#00ffcc" font-family="monospace" font-size="7">3.00</text>
+<text x="877" y="435" text-anchor="middle" fill="#667788" font-family="monospace" font-size="9">USTECH 5.28 | INFOTECH 4.58 | USAR 4.31 | Mean 2.20</text>
+<text x="322" y="488" text-anchor="middle" fill="#cccccc" font-family="monospace" font-size="12" font-weight="bold">Max Drawdown: Strategy vs Benchmark</text>
+<rect x="115" y="501.0" width="340" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="501.0" width="235" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="515" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">CRCL</text>
+<text x="460" y="515" fill="#667788" font-family="monospace" font-size="7">24.4% vs 35.4%</text>
+<rect x="115" y="522.6666666666666" width="269" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="522.6666666666666" width="233" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="536" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">SNDK</text>
+<text x="389" y="536" fill="#667788" font-family="monospace" font-size="7">24.2% vs 28.0%</text>
+<rect x="115" y="544.3333333333334" width="279" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="544.3333333333334" width="206" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="558" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">META</text>
+<text x="399" y="558" fill="#667788" font-family="monospace" font-size="7">21.4% vs 29.0%</text>
+<rect x="115" y="566.0" width="268" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="566.0" width="203" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="580" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">AMD</text>
+<text x="388" y="580" fill="#667788" font-family="monospace" font-size="7">21.1% vs 27.9%</text>
+<rect x="115" y="587.6666666666666" width="253" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="587.6666666666666" width="182" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="602" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">CL</text>
+<text x="373" y="602" fill="#667788" font-family="monospace" font-size="7">19.0% vs 26.3%</text>
+<rect x="115" y="609.3333333333334" width="312" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="609.3333333333334" width="181" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="623" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">MU</text>
+<text x="432" y="623" fill="#667788" font-family="monospace" font-size="7">18.8% vs 32.4%</text>
+<rect x="115" y="631.0" width="210" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="631.0" width="180" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="645" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">OIL</text>
+<text x="330" y="645" fill="#667788" font-family="monospace" font-size="7">18.7% vs 21.8%</text>
+<rect x="115" y="652.6666666666667" width="278" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="652.6666666666667" width="174" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="667" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">SILVER</text>
+<text x="398" y="667" fill="#667788" font-family="monospace" font-size="7">18.1% vs 28.9%</text>
+<rect x="115" y="674.3333333333334" width="167" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="674.3333333333334" width="168" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="688" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">USOIL</text>
+<text x="288" y="688" fill="#667788" font-family="monospace" font-size="7">17.5% vs 17.3%</text>
+<rect x="115" y="696.0" width="207" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="696.0" width="159" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="710" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">GOOGL</text>
+<text x="327" y="710" fill="#667788" font-family="monospace" font-size="7">16.5% vs 21.6%</text>
+<rect x="115" y="717.6666666666667" width="178" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="717.6666666666667" width="155" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="732" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">SPACEX</text>
+<text x="298" y="732" fill="#667788" font-family="monospace" font-size="7">16.1% vs 18.5%</text>
+<rect x="115" y="739.3333333333334" width="340" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="739.3333333333334" width="152" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="753" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">PLTR</text>
+<text x="460" y="753" fill="#667788" font-family="monospace" font-size="7">15.8% vs 35.3%</text>
+<rect x="115" y="761.0" width="394" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="761.0" width="148" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="775" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">MSTR</text>
+<text x="514" y="775" fill="#667788" font-family="monospace" font-size="7">15.3% vs 41.0%</text>
+<rect x="115" y="782.6666666666667" width="425" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="782.6666666666667" width="146" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="797" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">COIN</text>
+<text x="545" y="797" fill="#667788" font-family="monospace" font-size="7">15.2% vs 44.2%</text>
+<rect x="115" y="804.3333333333334" width="299" height="20" fill="#ff4444" opacity="0.3" rx="1"/>
+<rect x="115" y="804.3333333333334" width="143" height="20" fill="#4488ff" opacity="0.7" rx="1"/>
+<text x="112" y="818" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">OPENAI</text>
+<text x="419" y="818" fill="#667788" font-family="monospace" font-size="7">14.8% vs 31.1%</text>
+<text x="322" y="835" text-anchor="middle" fill="#667788" font-family="monospace" font-size="9">Strategy cuts drawdown by ~46% on average | Blue=strategy, Red=benchmark</text>
+<text x="877" y="488" text-anchor="middle" fill="#cccccc" font-family="monospace" font-size="12" font-weight="bold">Calmar Ratio by Asset (Top 15)</text>
+<rect x="670" y="501.0" width="425" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="515" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">INFOTECH</text>
+<text x="1098" y="515" fill="#667788" font-family="monospace" font-size="7">24.03</text>
+<rect x="670" y="522.6666666666666" width="388" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="536" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">ANTHROPI</text>
+<text x="1061" y="536" fill="#667788" font-family="monospace" font-size="7">21.95</text>
+<rect x="670" y="544.3333333333334" width="371" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="558" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">USTECH</text>
+<text x="1044" y="558" fill="#667788" font-family="monospace" font-size="7">21.00</text>
+<rect x="670" y="566.0" width="352" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="580" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">INTC</text>
+<text x="1025" y="580" fill="#667788" font-family="monospace" font-size="7">19.92</text>
+<rect x="670" y="587.6666666666666" width="277" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="602" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">TSM</text>
+<text x="950" y="602" fill="#667788" font-family="monospace" font-size="7">15.67</text>
+<rect x="670" y="609.3333333333334" width="277" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="623" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">USAR</text>
+<text x="950" y="623" fill="#667788" font-family="monospace" font-size="7">15.64</text>
+<rect x="670" y="631.0" width="254" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="645" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">CRWV</text>
+<text x="927" y="645" fill="#667788" font-family="monospace" font-size="7">14.34</text>
+<rect x="670" y="652.6666666666667" width="221" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="667" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">MAG7</text>
+<text x="894" y="667" fill="#667788" font-family="monospace" font-size="7">12.51</text>
+<rect x="670" y="674.3333333333334" width="218" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="688" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">BIOTECH</text>
+<text x="891" y="688" fill="#667788" font-family="monospace" font-size="7">12.31</text>
+<rect x="670" y="696.0" width="210" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="710" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">NUCLEAR</text>
+<text x="883" y="710" fill="#667788" font-family="monospace" font-size="7">11.87</text>
+<rect x="670" y="717.6666666666667" width="202" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="732" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">CL</text>
+<text x="875" y="732" fill="#667788" font-family="monospace" font-size="7">11.45</text>
+<rect x="670" y="739.3333333333334" width="198" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="753" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">OIL</text>
+<text x="871" y="753" fill="#667788" font-family="monospace" font-size="7">11.17</text>
+<rect x="670" y="761.0" width="191" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="775" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">SEMIS</text>
+<text x="864" y="775" fill="#667788" font-family="monospace" font-size="7">10.77</text>
+<rect x="670" y="782.6666666666667" width="188" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="797" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">URNM</text>
+<text x="861" y="797" fill="#667788" font-family="monospace" font-size="7">10.61</text>
+<rect x="670" y="804.3333333333334" width="187" height="20" fill="#ffcc00" opacity="0.7" rx="1"/>
+<text x="667" y="818" text-anchor="end" fill="#cccccc" font-family="monospace" font-size="8">USOIL</text>
+<text x="860" y="818" fill="#667788" font-family="monospace" font-size="7">10.56</text>
+<text x="877" y="835" text-anchor="middle" fill="#667788" font-family="monospace" font-size="9">INFOTECH 24.03 | ANTHROPIC 21.95 | USTECH 21.00 | Mean 7.58</text>
+</svg>

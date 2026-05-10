@@ -18,7 +18,7 @@ from PIL import Image
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from hyperliquid_hip3_client import generate_synthetic_hip3_data
+from hyperliquid_hip3_client import generate_synthetic_hip3_data, load_real_hip3_data
 from hip3_rolling_backtest import rolling_backtest_asset, generate_funding_history
 from iv_arbitrage_engine import IVArbitrageEngine
 from ibkr_options_client import bs_greeks
@@ -172,62 +172,56 @@ def gen_equity(curves):
     _gif(frames,OUT_DIR/'hip3_equity_curves.gif')
 
 def gen_regime(data, all_bt):
-    print('\n[5/7] hip3_regime_dashboard.png ...')
+    print('\n[5/7] hip3_regime_dashboard.gif ...')
     tk='SPY' if 'SPY' in data else list(data.keys())[0]
     df=data[tk]; bt=all_bt[tk]; c=df['close'].values; N=len(c)
     reg=bt['regimes']; pos=bt['positions']
-    # Rolling vol
     rets=np.diff(np.log(c),prepend=np.log(c[0]))
     rv=pd.Series(rets).rolling(20,min_periods=5).std().values*np.sqrt(365)*100
-    # Spread multiplier from regime
     sp_map={'BULL':0.8,'NORMAL':1.0,'CAUTIOUS':2.0,'CRISIS':3.0,'RECOVERY':1.3}
     sp_mult=np.array([sp_map.get(r,1.0) for r in reg])
-
-    fig=plt.figure(figsize=(16,11),facecolor=BG)
-    gs=GridSpec(3,2,hspace=0.4,wspace=0.3,left=.06,right=.97,top=.93,bottom=.05)
-    fig.suptitle(f'Regime Dashboard — {tk}',color=WHITE,fontsize=14,fontweight='bold',y=.97,fontfamily='monospace')
-    dy=np.arange(N)
-
-    # Top span: price colored by regime
-    ax=fig.add_subplot(gs[0,:]); _s(ax)
-    for i in range(1,N): ax.plot([i-1,i],[c[i-1],c[i]],color=REGIME_COLORS.get(reg[i],BLUE),lw=1.2,alpha=.85)
-    ax.set_title(f'{tk} Price — Colored by Regime',color=TEXT,fontsize=10,fontweight='bold')
-    ax.set_ylabel('Price',color=DIM,fontsize=8)
-
-    # Mid-Left: rolling vol
-    ax=fig.add_subplot(gs[1,0]); _s(ax)
-    ax.plot(dy,rv,color=YELLOW,lw=1.2)
-    ax.axhline(50,color=YELLOW,lw=.7,ls='--',alpha=.6,label='Cautious (50%)')
-    ax.axhline(65,color=RED,lw=.7,ls='--',alpha=.6,label='Crisis (65%)')
-    ax.set_title('20d Rolling Vol (ann%)',color=TEXT,fontsize=10,fontweight='bold')
-    ax.legend(fontsize=7,loc='upper right',facecolor=BG2,edgecolor=GRID_C,labelcolor=TEXT)
-
-    # Mid-Right: regime distribution
-    ax=fig.add_subplot(gs[1,1]); _s(ax)
-    labels=['BULL','NORMAL','CAUTIOUS','CRISIS','RECOVERY']
-    counts=[reg.count(l) for l in labels]
-    cols_bar=[REGIME_COLORS[l] for l in labels]
-    ax.barh(labels,counts,color=cols_bar,height=.6,alpha=.85)
-    ax.set_title('Regime Distribution',color=TEXT,fontsize=10,fontweight='bold')
-    for i,v in enumerate(counts): ax.text(v+2,i,str(v),color=TEXT,fontsize=8,va='center')
-
-    # Bottom-Left: spread multiplier
-    ax=fig.add_subplot(gs[2,0]); _s(ax)
-    for i in range(1,N): ax.plot([i-1,i],[sp_mult[i-1],sp_mult[i]],color=REGIME_COLORS.get(reg[i],BLUE),lw=1.2,alpha=.8)
-    ax.set_title('MM Spread Multiplier',color=TEXT,fontsize=10,fontweight='bold')
-    ax.set_ylabel('Multiplier',color=DIM,fontsize=8)
-    ax.set_ylim(0.5,3.5)
-
-    # Bottom-Right: position sizing
-    ax=fig.add_subplot(gs[2,1]); _s(ax)
-    for i in range(1,N): ax.plot([i-1,i],[pos[i-1]*100,pos[i]*100],color=REGIME_COLORS.get(reg[i],BLUE),lw=1.2,alpha=.8)
-    ax.axhline(100,color=DIM,lw=.5,ls='--')
-    ax.set_title('Base Position Sizing (%)',color=TEXT,fontsize=10,fontweight='bold')
-    ax.set_ylabel('Position %',color=DIM,fontsize=8)
-    ax.set_ylim(0,140)
-
-    fig.savefig(OUT_DIR/'hip3_regime_dashboard.png',dpi=150,facecolor=fig.get_facecolor())
-    plt.close(fig); print('  Saved hip3_regime_dashboard.png')
+    N_FRAMES=50
+    bx=np.linspace(max(30,N//8),N-1,N_FRAMES,dtype=int); frames=[]
+    for fi,d in enumerate(bx):
+        fig=plt.figure(figsize=(16,11),facecolor=BG)
+        gs=GridSpec(3,2,hspace=0.4,wspace=0.3,left=.06,right=.97,top=.93,bottom=.05)
+        rc=REGIME_COLORS.get(reg[d],BLUE)
+        fig.suptitle(f'Regime Dashboard — {tk} | {reg[d]} | Day {d}',
+                     color=rc,fontsize=14,fontweight='bold',y=.97,fontfamily='monospace')
+        dy=np.arange(d+1)
+        ax=fig.add_subplot(gs[0,:]); _s(ax)
+        for i in range(1,d+1): ax.plot([i-1,i],[c[i-1],c[i]],color=REGIME_COLORS.get(reg[i],BLUE),lw=1.2,alpha=.85)
+        ax.set_title(f'{tk} Price — Colored by Regime',color=TEXT,fontsize=10,fontweight='bold')
+        ax.set_ylabel('Price',color=DIM,fontsize=8)
+        ax.set_xlim(0,N)
+        ax=fig.add_subplot(gs[1,0]); _s(ax)
+        ax.plot(dy,rv[:d+1],color=YELLOW,lw=1.2)
+        ax.axhline(50,color=YELLOW,lw=.7,ls='--',alpha=.6,label='Cautious (50%)')
+        ax.axhline(65,color=RED,lw=.7,ls='--',alpha=.6,label='Crisis (65%)')
+        ax.set_title('20d Rolling Vol (ann%)',color=TEXT,fontsize=10,fontweight='bold')
+        ax.legend(fontsize=7,loc='upper right',facecolor=BG2,edgecolor=GRID_C,labelcolor=TEXT)
+        ax.set_xlim(0,N)
+        ax=fig.add_subplot(gs[1,1]); _s(ax)
+        labels=['BULL','NORMAL','CAUTIOUS','CRISIS','RECOVERY']
+        counts=[reg[:d+1].count(l) for l in labels]
+        cols_bar=[REGIME_COLORS[l] for l in labels]
+        ax.barh(labels,counts,color=cols_bar,height=.6,alpha=.85)
+        ax.set_title('Regime Distribution',color=TEXT,fontsize=10,fontweight='bold')
+        for i,v in enumerate(counts): ax.text(max(v,0)+1,i,str(v),color=TEXT,fontsize=8,va='center')
+        ax=fig.add_subplot(gs[2,0]); _s(ax)
+        for i in range(1,d+1): ax.plot([i-1,i],[sp_mult[i-1],sp_mult[i]],color=REGIME_COLORS.get(reg[i],BLUE),lw=1.2,alpha=.8)
+        ax.set_title('MM Spread Multiplier',color=TEXT,fontsize=10,fontweight='bold')
+        ax.set_ylabel('Multiplier',color=DIM,fontsize=8)
+        ax.set_ylim(0.5,3.5); ax.set_xlim(0,N)
+        ax=fig.add_subplot(gs[2,1]); _s(ax)
+        for i in range(1,d+1): ax.plot([i-1,i],[pos[i-1]*100,pos[i]*100],color=REGIME_COLORS.get(reg[i],BLUE),lw=1.2,alpha=.8)
+        ax.axhline(100,color=DIM,lw=.5,ls='--')
+        ax.set_title('Base Position Sizing (%)',color=TEXT,fontsize=10,fontweight='bold')
+        ax.set_ylabel('Position %',color=DIM,fontsize=8)
+        ax.set_ylim(0,140); ax.set_xlim(0,N)
+        frames.append(_img(fig,1600,1100)); plt.close(fig)
+        if (fi+1)%10==0: print(f'    {fi+1}/{N_FRAMES}')
+    _gif(frames,OUT_DIR/'hip3_regime_dashboard.gif',dur=200)
 
 def gen_heatmap(data):
     print('\n[6/7] hip3_vol_spread_heatmap.png ...')
@@ -286,7 +280,13 @@ def gen_summary(csv_path):
 def main():
     print('='*70); print('  HIP-3 Visualization Generator (Equities/Commodities/ETFs)'); print('='*70)
     OUT_DIR.mkdir(parents=True,exist_ok=True)
-    print('\nGenerating data (per-asset history since HIP-3 launch)...'); data=generate_synthetic_hip3_data(n_assets=25,min_days=100)
+    # Use real Hyperliquid HIP-3 candles + funding when cached; else synthetic.
+    data = load_real_hip3_data(min_days=100)
+    if data:
+        print(f'\nLoaded REAL HIP-3 data for {len(data)} assets from Hyperliquid API cache.')
+    else:
+        print('\nGenerating synthetic HIP-3 data (cache missing) ...')
+        data = generate_synthetic_hip3_data(n_assets=25, min_days=100)
     arb=IVArbitrageEngine(); all_bt={}; curves={}
     for tk,df in data.items():
         c,o,h,l=df['close'].values,df['open'].values,df['high'].values,df['low'].values
@@ -294,7 +294,7 @@ def main():
         bt=rolling_backtest_asset(o,h,l,c,f,arb.compute_hip3_implied_vol(c),arb.compute_ibkr_atm_iv(c),tk)
         all_bt[tk]=bt; curves[tk]=(bt['daily_pnl'][60:],bt['daily_bench'][60:])
     gen_dashboard(data,all_bt); gen_iv(); gen_greeks(); gen_equity(curves); gen_regime(data,all_bt); gen_heatmap(data)
-    csv=Path(__file__).resolve().parent.parent/'results'/'hip3_rolling_backtest_results.csv'
+    csv=Path(__file__).resolve().parent.parent/'results'/'hip3_all_premium_results.csv'
     if not csv.exists(): csv=Path(__file__).resolve().parent.parent/'results'/'hip3_backtest_results.csv'
     gen_summary(csv); print(f'\nDone! Output: {OUT_DIR}')
 

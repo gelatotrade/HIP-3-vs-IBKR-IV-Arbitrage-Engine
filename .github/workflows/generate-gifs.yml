@@ -1,0 +1,61 @@
+name: Decode GIF Visualizations
+on:
+  workflow_dispatch:
+  push:
+    branches: ['claude/market-making-bot-integration-eMRzh']
+    paths:
+      - 'docs/img/*.b64*'
+      - 'scripts/decode_gifs.py'
+      - 'scripts/generate_arbitrage_setups.py'
+      - 'scripts/generate_arbitrage_setups_animated.py'
+      - '.github/workflows/generate-gifs.yml'
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install numpy matplotlib Pillow scipy pandas
+      - name: Decode GIFs from base64 chunks
+        run: python scripts/decode_gifs.py
+      - name: Verify GIFs exist (fallback to generation if needed)
+        run: |
+          if [ ! -f docs/img/hip3_arbitrage_strategies_3d.gif ]; then
+            echo "Arbitrage GIF missing, generating from scratch..."
+            python scripts/generate_arbitrage_surfaces.py
+          fi
+          if [ ! -f docs/img/hip3_greeks_strategies_3d.gif ]; then
+            echo "Greeks GIF missing, generating from scratch..."
+            python scripts/generate_greeks_strategies_surfaces.py
+          fi
+      - name: Generate arbitrage setups PNG (4-panel trade setup viz)
+        run: |
+          if [ ! -f docs/img/hip3_arbitrage_setups_3d.png ]; then
+            echo "Arbitrage setups PNG missing, generating..."
+            python scripts/generate_arbitrage_setups.py
+          fi
+      - name: Generate 4 separate animated arbitrage-setup GIFs
+        run: |
+          MISSING=0
+          for f in setup1_vol_spread setup2_calendar_spread setup3_risk_reversal setup4_gamma_scalp; do
+            if [ ! -f "docs/img/hip3_arbitrage_${f}.gif" ]; then
+              MISSING=1
+            fi
+          done
+          if [ "$MISSING" = "1" ]; then
+            echo "One or more animated setup GIFs missing, generating all 4..."
+            python scripts/generate_arbitrage_setups_animated.py
+          fi
+      - name: Commit decoded/generated assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/img/*.gif docs/img/hip3_arbitrage_setups_3d.png
+          git rm -f docs/img/*.b64* 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "feat: decode/generate visualizations (GIFs + arbitrage setups)"
+          git push

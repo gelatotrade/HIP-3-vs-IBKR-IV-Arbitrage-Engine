@@ -1,0 +1,28 @@
+[package]
+name = "execution"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+common = { path = "../common" }
+hyperliquid-client = { path = "../hyperliquid-client" }
+orderbook = { path = "../orderbook" }
+risk = { path = "../risk" }
+persistence = { path = "../persistence" }
+metrics = { path = "../metrics" }
+
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+rust_decimal_macros.workspace = true
+parking_lot.workspace = true
+arc-swap.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "macros"] }

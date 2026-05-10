@@ -31,7 +31,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from hyperliquid_hip3_client import generate_synthetic_hip3_data
+from hyperliquid_hip3_client import (
+    generate_synthetic_hip3_data, load_real_hip3_data,
+)
 from iv_arbitrage_engine import IVArbitrageEngine
 from greeks_strategies import GreeksStrategyEngine, classify_regime
 
@@ -53,8 +55,11 @@ PARAM_GRID = {
 
 HL_MAKER_FEE_BPS  = 0.2
 HL_TAKER_FEE_BPS  = 0.5
-HL_FUNDING_BPS    = 1.0
 ADVERSE_SEL       = 0.40
+# Hyperliquid funding is settled HOURLY (24x/day). Real funding is variable
+# per bar (passed via funding_rates argument). Fallback below is the daily
+# baseline if no rate provided: 0.01% per 8h = ~3 bp/day.
+HL_FUNDING_FALLBACK_DAILY = 0.0003
 
 N_BOOTSTRAP    = 3000
 BLOCK_SIZE     = 15
@@ -64,7 +69,8 @@ SIGNIFICANCE   = 0.05
 OUT_DIR = Path(__file__).resolve().parent.parent / 'results'
 
 
-def run_hip3_backtest(opens, highs, lows, closes, params, hip3_iv, ibkr_iv):
+def run_hip3_backtest(opens, highs, lows, closes, params, hip3_iv, ibkr_iv,
+                      funding_rates=None):
     n_levels   = params['n_levels']
     step_bps   = params['level_step_bps']
     order_sz   = params['order_size']
@@ -82,11 +88,12 @@ def run_hip3_backtest(opens, highs, lows, closes, params, hip3_iv, ibkr_iv):
     rets = np.zeros(N)
     rets[1:] = np.diff(np.log(closes))
 
-    daily_pnl   = np.zeros(N)
+    daily_pnl    = np.zeros(N)
     daily_bench  = np.zeros(N)
     total_fills  = 0
     total_spread = 0.0
     total_iv_pnl = 0.0
+    total_funding= 0.0
 
     for i in range(1, N):
         regime = classify_regime(rets, i, crisis_vol)
@@ -126,18 +133,32 @@ def run_hip3_backtest(opens, highs, lows, closes, params, hip3_iv, ibkr_iv):
                 bar_spread_pnl += capture - sz * repeats * HL_MAKER_FEE_BPS / 10_000
                 bar_fills += repeats
 
+        # Variable funding rate (Hyperliquid hourly settlement, aggregated daily).
+        # Long position pays funding when rate > 0; short receives.
+        if funding_rates is not None and i < len(funding_rates):
+            f_rate = float(funding_rates[i])
+        else:
+            f_rate = HL_FUNDING_FALLBACK_DAILY
+
         iv_pnl = 0.0
+        iv_signal = 0.0
         if i < len(hip3_iv) and i < len(ibkr_iv) and hip3_iv[i] > 0 and ibkr_iv[i] > 0:
             vol_spread = hip3_iv[i] - ibkr_iv[i]
             iv_signal = -np.sign(vol_spread) * min(abs(vol_spread) * 2, 0.10)
             iv_pnl = iv_signal * abs(rets[i]) * iv_weight
-            iv_pnl -= abs(iv_signal) * HL_FUNDING_BPS / 10_000
+            # IV arb leg pays funding proportional to position size and direction
+            iv_pnl -= iv_signal * f_rate * iv_weight
 
-        daily_pnl[i]  = base * rets[i] + bar_spread_pnl + iv_pnl
+        # Base position pays funding too: long perp pays when funding>0, short receives.
+        # Sign convention: positive base means long, so funding cost = +base * f_rate.
+        base_funding_cost = base * f_rate
+
+        daily_pnl[i]  = base * rets[i] + bar_spread_pnl + iv_pnl - base_funding_cost
         daily_bench[i] = rets[i]
         total_fills  += bar_fills
         total_spread += bar_spread_pnl
         total_iv_pnl += iv_pnl
+        total_funding += base_funding_cost
 
     return daily_pnl, daily_bench, total_fills, total_spread, total_iv_pnl
 
@@ -183,12 +204,14 @@ def compute_metrics(s, b, fills, spread_pnl, iv_pnl):
     }
 
 
-def purged_kfold_cv(o, h, l, c, hip3_iv, ibkr_iv):
+def purged_kfold_cv(o, h, l, c, hip3_iv, ibkr_iv, funding_rates=None):
     """Purged expanding-window K-fold CV (Lopez de Prado 2018, Ch.7).
 
     For each fold k, train on [0, fold_start - purge - embargo) and test on fold k.
     Purge+embargo gaps prevent information leakage at fold boundaries.
     All 432 param combos evaluated on each test fold for Hansen's SPA test.
+    Variable funding rates (Hyperliquid hourly settlement) applied to base
+    and IV-arb position legs.
     """
     N = len(c)
     fold_size = max(N // 5, 20)
@@ -226,28 +249,30 @@ def purged_kfold_cv(o, h, l, c, hip3_iv, ibkr_iv):
         best_score, best_idx = -999, 0
         for ci, combo in enumerate(combos):
             params = dict(zip(keys, combo))
+            f_train = funding_rates[:train_end] if funding_rates is not None else None
             s, b, fl, sp, iv = run_hip3_backtest(
                 o[:train_end], h[:train_end], l[:train_end], c[:train_end],
-                params, hip3_iv[:train_end], ibkr_iv[:train_end])
+                params, hip3_iv[:train_end], ibkr_iv[:train_end], f_train)
             m = compute_metrics(s, b, fl, sp, iv)
             if m:
                 score = m['sharpe']*0.3 + m['calmar']*0.2 + m['alpha']*5.0 + m['iv_arb_ann']*3.0
                 if score > best_score:
                     best_score, best_idx = score, ci
 
+        f_test = funding_rates[test_start:test_end] if funding_rates is not None else None
         for ci, combo in enumerate(combos):
             params = dict(zip(keys, combo))
             s_c, b_c, _, _, _ = run_hip3_backtest(
                 o[test_start:test_end], h[test_start:test_end],
                 l[test_start:test_end], c[test_start:test_end],
-                params, hip3_iv[test_start:test_end], ibkr_iv[test_start:test_end])
+                params, hip3_iv[test_start:test_end], ibkr_iv[test_start:test_end], f_test)
             combo_oos_excess[ci].extend(list(s_c - b_c))
 
         best_params = dict(zip(keys, combos[best_idx]))
         s, b, fl, sp, iv = run_hip3_backtest(
             o[test_start:test_end], h[test_start:test_end],
             l[test_start:test_end], c[test_start:test_end],
-            best_params, hip3_iv[test_start:test_end], ibkr_iv[test_start:test_end])
+            best_params, hip3_iv[test_start:test_end], ibkr_iv[test_start:test_end], f_test)
 
         all_oos_strat.extend(list(s))
         all_oos_bench.extend(list(b))
@@ -408,8 +433,17 @@ def main():
     print('  Lopez de Prado (2018) | Hansen SPA (2005) | Regime-adaptive')
     print('='*90)
 
-    print('\nGenerating HIP-3 synthetic market data (per-asset history since HIP-3 launch) ...')
-    data = generate_synthetic_hip3_data(n_assets=25, min_days=100)
+    # Use REAL Hyperliquid HIP-3 candles + funding rates (cached in data/).
+    # Falls back to synthetic generator if the cache is missing.
+    data = load_real_hip3_data(min_days=25)
+    if data:
+        print(f'\nLoaded REAL HIP-3 data (candles + funding) for {len(data)} assets '
+              f'from Hyperliquid API cache (data/candles + data/funding_rates).')
+    else:
+        print('\nReal cache missing — falling back to synthetic HIP-3 market data.')
+        print('Run `python3 scripts/fetch_hip3_candles.py` and '
+              '`python3 scripts/fetch_hip3_funding.py` first.')
+        data = generate_synthetic_hip3_data(n_assets=25, min_days=100)
 
     arb_engine = IVArbitrageEngine()
     nc = len(list(product(*PARAM_GRID.values())))
@@ -424,10 +458,12 @@ def main():
         if len(c) < MIN_TRAIN_BARS + MIN_TEST_BARS:
             print(f'SKIP ({len(c)} bars)'); continue
 
-        hip3_iv = arb_engine.compute_hip3_implied_vol(c)
+        # Variable funding rate from synthetic data (Hyperliquid hourly mechanism).
+        funding = df['funding_rate'].values if 'funding_rate' in df.columns else None
+        hip3_iv = arb_engine.compute_hip3_implied_vol(c, funding_rates=funding)
         ibkr_iv = arb_engine.compute_ibkr_atm_iv(c)
 
-        cv = purged_kfold_cv(o, h, l, c, hip3_iv, ibkr_iv)
+        cv = purged_kfold_cv(o, h, l, c, hip3_iv, ibkr_iv, funding_rates=funding)
         if cv is None:
             print('SKIP'); continue
 

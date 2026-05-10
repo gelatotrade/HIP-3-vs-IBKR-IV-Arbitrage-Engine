@@ -5,3 +5,16 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Rust
+rust/target/
+*.ring
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
